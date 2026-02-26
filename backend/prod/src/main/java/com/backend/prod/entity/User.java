@@ -1,6 +1,7 @@
 package com.backend.prod.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "users")
@@ -11,18 +12,65 @@ public class User {
     private Long id;
 
     private String name;
+
+    @Column(unique = true, nullable = false)
     private String email;
 
-    // getters and setters
-    public Long getId() { return id; }
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(nullable = false)
+    private String password;
 
-    public void setId(Long id) { this.id = id; }
+    private String studentId;
 
-    public String getName() { return name; }
+    private String gender;
 
-    public void setName(String name) { this.name = name; }
+    // ===== Getters and Setters =====
 
-    public String getEmail() { return email; }
+    public Long getId() { 
+        return id; 
+    }
 
-    public void setEmail(String email) { this.email = email; }
+    public void setId(Long id) { 
+        this.id = id; 
+    }
+
+    public String getName() { 
+        return name; 
+    }
+
+    public void setName(String name) { 
+        this.name = name; 
+    }
+
+    public String getEmail() { 
+        return email; 
+    }
+
+    public void setEmail(String email) { 
+        this.email = email; 
+    }
+
+    public String getPassword() { 
+        return password; 
+    }
+
+    public void setPassword(String password) { 
+        this.password = password; 
+    }
+
+    public String getStudentId() { 
+        return studentId; 
+    }
+
+    public void setStudentId(String studentId) { 
+        this.studentId = studentId; 
+    }
+
+    public String getGender() { 
+        return gender; 
+    }
+
+    public void setGender(String gender) { 
+        this.gender = gender; 
+    }
 }
