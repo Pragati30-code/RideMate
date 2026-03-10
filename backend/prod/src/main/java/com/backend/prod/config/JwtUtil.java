@@ -3,6 +3,7 @@ package com.backend.prod.config;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -10,10 +11,11 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
+    private final Key key;
+    public JwtUtil (@Value("${jwt.secret}") String secret) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
-    private final String SECRET = "mySuperSecretKeyForJwtThatIsVeryLong123456";
-
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     public String generateToken(String email) {
 
