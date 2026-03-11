@@ -1,7 +1,10 @@
 package com.backend.prod.controller;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.backend.prod.dto.LoginRequest;
+import com.backend.prod.dto.LoginResponse;
 import com.backend.prod.entity.User;
 import com.backend.prod.service.AuthService;
 
@@ -22,9 +25,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestParam String email,
-                        @RequestParam String password) {
+    public LoginResponse login(@RequestBody LoginRequest request) {
+        return authService.login(request.getEmail(), request.getPassword());
+    }
 
-        return authService.login(email, password);
+    @GetMapping("/me")
+    public User me(Authentication authentication) {
+        String email = authentication.getName();
+        return authService.getCurrentUser(email);
     }
 }

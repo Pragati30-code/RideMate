@@ -10,6 +10,8 @@ import com.backend.prod.repository.BookingRepository;
 import com.backend.prod.repository.RideRepository;
 import com.backend.prod.repository.UserRepository;
 
+import java.util.List;
+
 @Service
 public class BookingService {
 
@@ -26,19 +28,29 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking createBooking(Long rideId, Long userId, int seats) {
-
+    public Booking createBooking(Long rideId, String email, int seats) {
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Can't book your own ride
+        if (ride.getDriver().getId().equals(user.getId())) {
+            throw new RuntimeException("You cannot book your own ride");
+        }
+
+        // Check if ride is still active
+        if (!"ACTIVE".equals(ride.getStatus())) {
+            throw new RuntimeException("This ride is no longer available");
+        }
 
         if (ride.getAvailableSeats() < seats) {
             throw new RuntimeException("Not enough seats available");
         }
 
         ride.setAvailableSeats(ride.getAvailableSeats() - seats);
+        rideRepository.save(ride);
 
         Booking booking = new Booking();
         booking.setRide(ride);
@@ -46,6 +58,37 @@ public class BookingService {
         booking.setSeatsBooked(seats);
         booking.setStatus("CONFIRMED");
 
+        return bookingRepository.save(booking);
+    }
+
+    public List<Booking> getMyBookings(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return bookingRepository.findByUser(user);
+    }
+
+    @Transactional
+    public Booking cancelBooking(Long bookingId, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only cancel your own bookings");
+        }
+
+        if ("CANCELLED".equals(booking.getStatus())) {
+            throw new RuntimeException("Booking is already cancelled");
+        }
+
+        // Restore seats to the ride
+        Ride ride = booking.getRide();
+        ride.setAvailableSeats(ride.getAvailableSeats() + booking.getSeatsBooked());
+        rideRepository.save(ride);
+
+        booking.setStatus("CANCELLED");
         return bookingRepository.save(booking);
     }
 }
