@@ -32,6 +32,14 @@ public class User {
     @Column(name = "verified_driver", nullable = false)
     private Boolean verifiedDriver = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_role")
+    private UserRole role = UserRole.USER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status")
+    private DriverVerificationStatus verificationStatus;
+
     // ===== Getters and Setters =====
 
     public Long getId() { 
@@ -104,5 +112,21 @@ public class User {
 
     public void setVerifiedDriver(boolean verifiedDriver) {
         this.verifiedDriver = verifiedDriver;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public DriverVerificationStatus getVerificationStatus() {
+        return verificationStatus;
+    }
+
+    public void setVerificationStatus(DriverVerificationStatus verificationStatus) {
+        this.verificationStatus = verificationStatus;
     }
 }

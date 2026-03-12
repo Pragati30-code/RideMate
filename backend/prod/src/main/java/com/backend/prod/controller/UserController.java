@@ -4,6 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.backend.prod.dto.DriverVerificationRequest;
+import com.backend.prod.entity.DriverVerificationStatus;
 import com.backend.prod.entity.User;
 import com.backend.prod.repository.UserRepository;
 
@@ -35,6 +36,8 @@ public class UserController {
 
         user.setVehicleNumber(request.getVehicleNumber());
         user.setDrivingLicense(request.getDrivingLicense());
+        user.setVerificationStatus(DriverVerificationStatus.PENDING);
+        user.setVerifiedDriver(false);
         userRepository.save(user);
 
         return Map.of("message", "Driver details submitted for verification. You will be notified once verified.");
@@ -48,25 +51,10 @@ public class UserController {
 
         return Map.of(
                 "isVerifiedDriver", user.isVerifiedDriver(),
+                "verificationStatus", user.getVerificationStatus() != null ? user.getVerificationStatus().name() : "",
                 "vehicleNumber", user.getVehicleNumber() != null ? user.getVehicleNumber() : "",
                 "drivingLicense", user.getDrivingLicense() != null ? user.getDrivingLicense() : "",
                 "detailsSubmitted", user.getVehicleNumber() != null && user.getDrivingLicense() != null
         );
-    }
-
-    // Admin endpoint to verify a driver (temporary - for manual verification)
-    @PutMapping("/verify-driver/{userId}")
-    public Map<String, String> verifyDriver(@PathVariable Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getVehicleNumber() == null || user.getDrivingLicense() == null) {
-            throw new RuntimeException("User has not submitted driver details");
-        }
-
-        user.setVerifiedDriver(true);
-        userRepository.save(user);
-
-        return Map.of("message", "User " + user.getName() + " is now a verified driver");
     }
 }

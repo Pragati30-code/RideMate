@@ -3,6 +3,7 @@ package com.backend.prod.service;
 import com.backend.prod.config.JwtUtil;
 import com.backend.prod.dto.LoginResponse;
 import com.backend.prod.entity.User;
+import com.backend.prod.entity.UserRole;
 import com.backend.prod.exception.EmailAlreadyExistsException;
 import com.backend.prod.repository.UserRepository;
 
@@ -33,6 +34,7 @@ public class AuthService {
             throw new EmailAlreadyExistsException("Email already registered");
         }
 
+        user.setRole(UserRole.USER);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
@@ -45,8 +47,14 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        String token = jwtUtil.generateToken(email);
-        return new LoginResponse(token, user.getId(), user.getName(), user.getEmail());
+        UserRole role = user.getRole() != null ? user.getRole() : UserRole.USER;
+        if (user.getRole() == null) {
+            user.setRole(UserRole.USER);
+            userRepository.save(user);
+        }
+
+        String token = jwtUtil.generateToken(email, role.name());
+        return new LoginResponse(token, user.getId(), user.getName(), user.getEmail(), role.name());
     }
 
     public User getCurrentUser(String email) {
