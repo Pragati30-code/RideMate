@@ -19,6 +19,8 @@ public class Ride {
 
     private double price;
 
+    private String status = "ACTIVE"; // ACTIVE, COMPLETED, CANCELLED
+
     // Many rides can be created by one user (driver)
     @ManyToOne
     @JoinColumn(name = "driver_id")
@@ -45,4 +47,7 @@ public class Ride {
 
     public User getDriver() { return driver; }
     public void setDriver(User driver) { this.driver = driver; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }
