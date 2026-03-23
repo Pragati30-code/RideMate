@@ -8,7 +8,7 @@ import {
   MarkerLabel,
   type MapRef,
 } from "@/components/ui/map";
-import { DriverStatus } from "../types";
+import { DriverStatus, Ride } from "../types";
 
 const DEFAULT_MAP_CENTER: [number, number] = [73.8567, 18.5204];
 
@@ -36,8 +36,9 @@ type MakeRideSectionProps = {
   destinationLongitude: string;
   departureTime: string;
   availableSeats: string;
-  ridePrice: string;
+  myRides: Ride[];
   creatingRide: boolean;
+  rideActionLoadingId: number | null;
   onVehicleNumberChange: (value: string) => void;
   onDrivingLicenseChange: (value: string) => void;
   onSubmitVerification: () => void;
@@ -49,8 +50,9 @@ type MakeRideSectionProps = {
   onDestinationLongitudeChange: (value: string) => void;
   onDepartureTimeChange: (value: string) => void;
   onAvailableSeatsChange: (value: string) => void;
-  onRidePriceChange: (value: string) => void;
   onCreateRide: () => void;
+  onStartRide: (rideId: number) => void;
+  onEndRide: (rideId: number) => void;
 };
 
 export default function MakeRideSection({
@@ -66,8 +68,9 @@ export default function MakeRideSection({
   destinationLongitude,
   departureTime,
   availableSeats,
-  ridePrice,
+  myRides,
   creatingRide,
+  rideActionLoadingId,
   onVehicleNumberChange,
   onDrivingLicenseChange,
   onSubmitVerification,
@@ -79,8 +82,9 @@ export default function MakeRideSection({
   onDestinationLongitudeChange,
   onDepartureTimeChange,
   onAvailableSeatsChange,
-  onRidePriceChange,
   onCreateRide,
+  onStartRide,
+  onEndRide,
 }: MakeRideSectionProps) {
   const [sourceSuggestions, setSourceSuggestions] = useState<NominatimSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<NominatimSuggestion[]>([]);
@@ -424,15 +428,6 @@ export default function MakeRideSection({
                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
               />
             </div>
-            <div className="space-y-2">
-              <label className="block text-sm text-white/70">Price</label>
-              <input
-                type="number"
-                value={ridePrice}
-                onChange={(e) => onRidePriceChange(e.target.value)}
-                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
-              />
-            </div>
           </div>
 
           <button
@@ -442,6 +437,50 @@ export default function MakeRideSection({
           >
             {creatingRide ? "Creating..." : "Create Ride"}
           </button>
+
+          <div className="space-y-3 pt-3">
+            <h3 className="text-lg font-semibold">My Created Rides</h3>
+            {myRides.length === 0 && <p className="text-sm text-white/60">You have not created any rides yet.</p>}
+            {myRides.map((ride) => (
+              <div key={ride.id} className="border border-white/10 rounded-xl p-4 bg-zinc-950/40 space-y-2">
+                <p className="font-semibold">
+                  {ride.source} to {ride.destination}
+                </p>
+                <p className="text-sm text-white/60">
+                  Status: {ride.status ?? "-"} | Seats: {ride.availableSeats ?? "-"}
+                </p>
+                {ride.departureTime && (
+                  <p className="text-sm text-white/60">
+                    Departure: {new Date(ride.departureTime).toLocaleString()}
+                  </p>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  {(ride.status === "ACTIVE" || ride.status === "FULL") && (
+                    <button
+                      type="button"
+                      onClick={() => onStartRide(ride.id)}
+                      disabled={rideActionLoadingId === ride.id}
+                      className="px-4 py-2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 disabled:opacity-60"
+                    >
+                      {rideActionLoadingId === ride.id ? "Starting..." : "Start Ride"}
+                    </button>
+                  )}
+
+                  {ride.status === "IN_PROGRESS" && (
+                    <button
+                      type="button"
+                      onClick={() => onEndRide(ride.id)}
+                      disabled={rideActionLoadingId === ride.id}
+                      className="px-4 py-2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 disabled:opacity-60"
+                    >
+                      {rideActionLoadingId === ride.id ? "Ending..." : "End Ride"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

@@ -22,6 +22,10 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 
     // Get rides by driver
     List<Ride> findByDriver(User driver);
+    boolean existsByDriverAndStatusIn(User driver, List<String> statuses);
+
+    List<Ride> findByStatusInAndDepartureTimeAfter(List<String> statuses, LocalDateTime after);
+
 
     // Flexible search with case-insensitive partial matching
     @Query("SELECT r FROM Ride r WHERE " +

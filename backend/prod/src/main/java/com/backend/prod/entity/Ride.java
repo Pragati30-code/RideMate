@@ -31,40 +31,126 @@ public class Ride {
     @JoinColumn(name = "driver_id")
     private User driver;
 
+    private Double distanceKm; // full route distance, set at ride creation
+    private LocalDateTime startedAt; // set when driver starts ride
+    private LocalDateTime endedAt; // set when driver ends ride
+
     // getters & setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDestination() { return destination; }
-    public void setDestination(String destination) { this.destination = destination; }
+    public String getSource() {
+        return source;
+    }
 
-    public Double getSourceLatitude() { return sourceLatitude; }
-    public void setSourceLatitude(Double sourceLatitude) { this.sourceLatitude = sourceLatitude; }
+    public void setSource(String source) {
+        this.source = source;
+    }
 
-    public Double getSourceLongitude() { return sourceLongitude; }
-    public void setSourceLongitude(Double sourceLongitude) { this.sourceLongitude = sourceLongitude; }
+    public String getDestination() {
+        return destination;
+    }
 
-    public Double getDestinationLatitude() { return destinationLatitude; }
-    public void setDestinationLatitude(Double destinationLatitude) { this.destinationLatitude = destinationLatitude; }
+    public void setDestination(String destination) {
+        this.destination = destination;
+    }
 
-    public Double getDestinationLongitude() { return destinationLongitude; }
-    public void setDestinationLongitude(Double destinationLongitude) { this.destinationLongitude = destinationLongitude; }
+    public Double getSourceLatitude() {
+        return sourceLatitude;
+    }
 
-    public LocalDateTime getDepartureTime() { return departureTime; }
-    public void setDepartureTime(LocalDateTime departureTime) { this.departureTime = departureTime; }
+    public void setSourceLatitude(Double sourceLatitude) {
+        this.sourceLatitude = sourceLatitude;
+    }
 
-    public int getAvailableSeats() { return availableSeats; }
-    public void setAvailableSeats(int availableSeats) { this.availableSeats = availableSeats; }
+    public Double getSourceLongitude() {
+        return sourceLongitude;
+    }
 
-    public double getPrice() { return price; }
-    public void setPrice(double price) { this.price = price; }
+    public void setSourceLongitude(Double sourceLongitude) {
+        this.sourceLongitude = sourceLongitude;
+    }
 
-    public User getDriver() { return driver; }
-    public void setDriver(User driver) { this.driver = driver; }
+    public Double getDestinationLatitude() {
+        return destinationLatitude;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setDestinationLatitude(Double destinationLatitude) {
+        this.destinationLatitude = destinationLatitude;
+    }
+
+    public Double getDestinationLongitude() {
+        return destinationLongitude;
+    }
+
+    public void setDestinationLongitude(Double destinationLongitude) {
+        this.destinationLongitude = destinationLongitude;
+    }
+
+    public LocalDateTime getDepartureTime() {
+        return departureTime;
+    }
+
+    public void setDepartureTime(LocalDateTime departureTime) {
+        this.departureTime = departureTime;
+    }
+
+    public int getAvailableSeats() {
+        return availableSeats;
+    }
+
+    public void setAvailableSeats(int availableSeats) {
+        this.availableSeats = availableSeats;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public User getDriver() {
+        return driver;
+    }
+
+    public void setDriver(User driver) {
+        this.driver = driver;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    public Double getDistanceKm() {
+        return distanceKm;
+    }
+
+    public void setDistanceKm(Double distanceKm) {
+        this.distanceKm = distanceKm;
+    }
+    public LocalDateTime getStartedAt() {
+        return startedAt;
+    }
+
+    public void setStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
+    }
+    public LocalDateTime getEndedAt() {
+        return endedAt;
+    }
+
+    public void setEndedAt(LocalDateTime endedAt) {
+        this.endedAt = endedAt;
+    }
+
 }
