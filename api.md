@@ -232,12 +232,22 @@ Request body:
 ```json
 {
   "source": "VIT Pune",
+  "sourceLatitude": 18.4636,
+  "sourceLongitude": 73.8670,
   "destination": "Swargate",
+  "destinationLatitude": 18.5018,
+  "destinationLongitude": 73.8636,
   "departureTime": "2026-03-14T09:30:00",
   "availableSeats": 3,
   "price": 80
 }
 ```
+
+Coordinate notes:
+
+- `sourceLatitude` and `destinationLatitude` must be between `-90` and `90`
+- `sourceLongitude` and `destinationLongitude` must be between `-180` and `180`
+- Coordinate fields are currently optional, but recommended for accurate location-based features
 
 Success response:
 
@@ -245,7 +255,11 @@ Success response:
 {
   "id": 10,
   "source": "VIT Pune",
+  "sourceLatitude": 18.4636,
+  "sourceLongitude": 73.8670,
   "destination": "Swargate",
+  "destinationLatitude": 18.5018,
+  "destinationLongitude": 73.8636,
   "departureTime": "2026-03-14T09:30:00",
   "availableSeats": 3,
   "price": 80.0,

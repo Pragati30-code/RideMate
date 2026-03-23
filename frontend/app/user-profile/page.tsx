@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiUrl, getAuthHeaders, getAuthToken, clearAuthSession } from "@/lib/api";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 
 type UserProfile = {
 	id: number;
@@ -33,6 +33,13 @@ export default function UserProfilePage() {
 	const [error, setError] = useState("");
 	const [profile, setProfile] = useState<UserProfile | null>(null);
 	const [driverStatus, setDriverStatus] = useState<DriverStatus | null>(null);
+	const [loggingOut, setLoggingOut] = useState(false);
+
+	const handleLogout = () => {
+		setLoggingOut(true);
+		clearAuthSession();
+		router.replace("/login");
+	};
 
 	useEffect(() => {
 		const token = getAuthToken();
@@ -100,15 +107,26 @@ export default function UserProfilePage() {
 			<header className="border-b border-white/10">
 				<div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
 					<h1 className="text-2xl font-bold">User Profile</h1>
-					<Link
-						href="/dashboard"
-						aria-label="Back to Dashboard"
-						title="Back to Dashboard"
-						className="px-3 py-2 md:px-4 md:py-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors flex items-center gap-2"
-					>
-						<ArrowLeft className="w-5 h-5 md:hidden" />
-						<span className="hidden md:inline">Back to Dashboard</span>
-					</Link>
+					<div className="flex items-center gap-2">
+						<button
+							type="button"
+							onClick={handleLogout}
+							disabled={loggingOut}
+							className="px-3 py-2 md:px-4 md:py-2 rounded-full border border-red-400/40 text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-2 disabled:opacity-60"
+						>
+							<LogOut className="w-4 h-4" />
+							<span>{loggingOut ? "Logging out..." : "Logout"}</span>
+						</button>
+						<Link
+							href="/dashboard"
+							aria-label="Back to Dashboard"
+							title="Back to Dashboard"
+							className="px-3 py-2 md:px-4 md:py-2 rounded-full border border-white/20 hover:bg-white/10 transition-colors flex items-center gap-2"
+						>
+							<ArrowLeft className="w-5 h-5 md:hidden" />
+							<span className="hidden md:inline">Back to Dashboard</span>
+						</Link>
+					</div>
 				</div>
 			</header>
 
