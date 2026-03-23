@@ -30,9 +30,15 @@ public class RideService {
             throw new RuntimeException("You need to be a verified driver to create rides. Please submit your vehicle details for verification.");
         }
 
+        validateCoordinates(request);
+
         Ride ride = new Ride();
         ride.setSource(request.getSource());
         ride.setDestination(request.getDestination());
+        ride.setSourceLatitude(request.getSourceLatitude());
+        ride.setSourceLongitude(request.getSourceLongitude());
+        ride.setDestinationLatitude(request.getDestinationLatitude());
+        ride.setDestinationLongitude(request.getDestinationLongitude());
         ride.setDepartureTime(request.getDepartureTime());
         ride.setAvailableSeats(request.getAvailableSeats());
         ride.setPrice(request.getPrice());
@@ -88,5 +94,30 @@ public class RideService {
                 LocalDateTime.now(), 
                 0
         );
+    }
+
+    private void validateCoordinates(CreateRideRequest request) {
+        validateLatitude(request.getSourceLatitude(), "sourceLatitude");
+        validateLongitude(request.getSourceLongitude(), "sourceLongitude");
+        validateLatitude(request.getDestinationLatitude(), "destinationLatitude");
+        validateLongitude(request.getDestinationLongitude(), "destinationLongitude");
+    }
+
+    private void validateLatitude(Double value, String fieldName) {
+        if (value == null) {
+            return;
+        }
+        if (value < -90 || value > 90) {
+            throw new RuntimeException(fieldName + " must be between -90 and 90");
+        }
+    }
+
+    private void validateLongitude(Double value, String fieldName) {
+        if (value == null) {
+            return;
+        }
+        if (value < -180 || value > 180) {
+            throw new RuntimeException(fieldName + " must be between -180 and 180");
+        }
     }
 }

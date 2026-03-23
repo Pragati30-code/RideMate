@@ -20,7 +20,8 @@ export default function DashboardPage() {
 
 	const [searchSource, setSearchSource] = useState("");
 	const [searchDestination, setSearchDestination] = useState("");
-	const [rides, setRides] = useState<Ride[]>([]);
+	const [searchedRides, setSearchedRides] = useState<Ride[]>([]);
+	const [activeRides, setActiveRides] = useState<Ride[]>([]);
 
 	const [vehicleNumber, setVehicleNumber] = useState("");
 	const [drivingLicense, setDrivingLicense] = useState("");
@@ -28,9 +29,13 @@ export default function DashboardPage() {
 
 	const [rideSource, setRideSource] = useState("");
 	const [rideDestination, setRideDestination] = useState("");
+	const [sourceLatitude, setSourceLatitude] = useState("");
+	const [sourceLongitude, setSourceLongitude] = useState("");
+	const [destinationLatitude, setDestinationLatitude] = useState("");
+	const [destinationLongitude, setDestinationLongitude] = useState("");
 	const [departureTime, setDepartureTime] = useState("");
-	const [availableSeats, setAvailableSeats] = useState(1);
-	const [ridePrice, setRidePrice] = useState(50);
+	const [availableSeats, setAvailableSeats] = useState("");
+	const [ridePrice, setRidePrice] = useState("");
 	const [creatingRide, setCreatingRide] = useState(false);
 
 	const fetchDriverStatus = async () => {
@@ -51,6 +56,22 @@ export default function DashboardPage() {
 		if (data.drivingLicense) setDrivingLicense(data.drivingLicense);
 	};
 
+	const fetchActiveRides = async () => {
+		const res = await fetch(apiUrl("/rides"), {
+			method: "GET",
+			headers: {
+				...getAuthHeaders(),
+			},
+		});
+
+		if (!res.ok) {
+			throw new Error("Could not load active rides");
+		}
+
+		const data = (await res.json()) as Ride[];
+		setActiveRides(data);
+	};
+
 	useEffect(() => {
 		const token = getAuthToken();
 		if (!token) {
@@ -62,6 +83,7 @@ export default function DashboardPage() {
 			setLoading(true);
 			try {
 				await fetchDriverStatus();
+				await fetchActiveRides();
 			} catch (e) {
 				setError("Session expired. Please login again.");
 				clearAuthSession();
@@ -77,7 +99,7 @@ export default function DashboardPage() {
 	const handleSearchRides = async () => {
 		setMessage("");
 		setError("");
-		setRides([]);
+		setSearchedRides([]);
 
 		try {
 			const res = await fetch(apiUrl("/rides/search"), {
@@ -98,7 +120,7 @@ export default function DashboardPage() {
 			}
 
 			const data = (await res.json()) as Ride[];
-			setRides(data);
+			setSearchedRides(data);
 			setMessage(data.length ? "Rides found" : "No rides found for this route");
 		} catch (e) {
 			setError("Unable to reach server. Try again.");
@@ -139,6 +161,54 @@ export default function DashboardPage() {
 		setError("");
 		setCreatingRide(true);
 
+		const parsedSeats = Number(availableSeats);
+		const parsedPrice = Number(ridePrice);
+		const parsedSourceLatitude = sourceLatitude ? Number(sourceLatitude) : null;
+		const parsedSourceLongitude = sourceLongitude ? Number(sourceLongitude) : null;
+		const parsedDestinationLatitude = destinationLatitude ? Number(destinationLatitude) : null;
+		const parsedDestinationLongitude = destinationLongitude ? Number(destinationLongitude) : null;
+
+		if (!parsedSeats || !parsedPrice || parsedSeats <= 0 || parsedPrice <= 0) {
+			setError("Please enter valid values for available seats and price.");
+			setCreatingRide(false);
+			return;
+		}
+
+		if (
+			(sourceLatitude && Number.isNaN(parsedSourceLatitude)) ||
+			(sourceLongitude && Number.isNaN(parsedSourceLongitude)) ||
+			(destinationLatitude && Number.isNaN(parsedDestinationLatitude)) ||
+			(destinationLongitude && Number.isNaN(parsedDestinationLongitude))
+		) {
+			setError("Please enter valid numeric latitude/longitude values.");
+			setCreatingRide(false);
+			return;
+		}
+
+		if (parsedSourceLatitude !== null && (parsedSourceLatitude < -90 || parsedSourceLatitude > 90)) {
+			setError("Source latitude must be between -90 and 90.");
+			setCreatingRide(false);
+			return;
+		}
+
+		if (parsedDestinationLatitude !== null && (parsedDestinationLatitude < -90 || parsedDestinationLatitude > 90)) {
+			setError("Destination latitude must be between -90 and 90.");
+			setCreatingRide(false);
+			return;
+		}
+
+		if (parsedSourceLongitude !== null && (parsedSourceLongitude < -180 || parsedSourceLongitude > 180)) {
+			setError("Source longitude must be between -180 and 180.");
+			setCreatingRide(false);
+			return;
+		}
+
+		if (parsedDestinationLongitude !== null && (parsedDestinationLongitude < -180 || parsedDestinationLongitude > 180)) {
+			setError("Destination longitude must be between -180 and 180.");
+			setCreatingRide(false);
+			return;
+		}
+
 		try {
 			const res = await fetch(apiUrl("/rides"), {
 				method: "POST",
@@ -148,10 +218,14 @@ export default function DashboardPage() {
 				},
 				body: JSON.stringify({
 					source: rideSource,
+					sourceLatitude: parsedSourceLatitude,
+					sourceLongitude: parsedSourceLongitude,
 					destination: rideDestination,
+					destinationLatitude: parsedDestinationLatitude,
+					destinationLongitude: parsedDestinationLongitude,
 					departureTime,
-					availableSeats,
-					price: ridePrice,
+					availableSeats: parsedSeats,
+					price: parsedPrice,
 				}),
 			});
 
@@ -161,11 +235,16 @@ export default function DashboardPage() {
 			}
 
 			setMessage("Ride created successfully.");
+			await fetchActiveRides();
 			setRideSource("");
 			setRideDestination("");
+			setSourceLatitude("");
+			setSourceLongitude("");
+			setDestinationLatitude("");
+			setDestinationLongitude("");
 			setDepartureTime("");
-			setAvailableSeats(1);
-			setRidePrice(50);
+			setAvailableSeats("");
+			setRidePrice("");
 		} catch (e) {
 			setError("Unable to create ride.");
 		} finally {
@@ -195,7 +274,8 @@ export default function DashboardPage() {
 					<BookRideSection
 						searchSource={searchSource}
 						searchDestination={searchDestination}
-						rides={rides}
+						searchedRides={searchedRides}
+						activeRides={activeRides}
 						onSearchSourceChange={setSearchSource}
 						onSearchDestinationChange={setSearchDestination}
 						onSearch={handleSearchRides}
@@ -210,6 +290,10 @@ export default function DashboardPage() {
 						submittingVerification={submittingVerification}
 						rideSource={rideSource}
 						rideDestination={rideDestination}
+						sourceLatitude={sourceLatitude}
+						sourceLongitude={sourceLongitude}
+						destinationLatitude={destinationLatitude}
+						destinationLongitude={destinationLongitude}
 						departureTime={departureTime}
 						availableSeats={availableSeats}
 						ridePrice={ridePrice}
@@ -219,6 +303,10 @@ export default function DashboardPage() {
 						onSubmitVerification={handleSubmitVerification}
 						onRideSourceChange={setRideSource}
 						onRideDestinationChange={setRideDestination}
+						onSourceLatitudeChange={setSourceLatitude}
+						onSourceLongitudeChange={setSourceLongitude}
+						onDestinationLatitudeChange={setDestinationLatitude}
+						onDestinationLongitudeChange={setDestinationLongitude}
 						onDepartureTimeChange={setDepartureTime}
 						onAvailableSeatsChange={setAvailableSeats}
 						onRidePriceChange={setRidePrice}
