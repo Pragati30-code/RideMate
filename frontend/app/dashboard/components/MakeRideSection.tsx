@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Map,
@@ -456,6 +457,13 @@ export default function MakeRideSection({
                 )}
 
                 <div className="flex gap-2 pt-1">
+                  <Link
+                    href={`/driver-dashboard?rideId=${ride.id}`}
+                    className="px-4 py-2 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30"
+                  >
+                    Track Passengers
+                  </Link>
+
                   {(ride.status === "ACTIVE" || ride.status === "FULL") && (
                     <button
                       type="button"

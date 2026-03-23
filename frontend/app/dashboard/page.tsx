@@ -75,7 +75,7 @@ export default function DashboardPage() {
 		}
 
 		const data = (await res.json()) as Ride[];
-		setActiveRides(data);
+		setActiveRides([...data].sort((a, b) => b.id - a.id));
 	};
 
 	const fetchMyRides = async () => {
@@ -91,7 +91,7 @@ export default function DashboardPage() {
 		}
 
 		const data = (await res.json()) as Ride[];
-		setMyRides(data);
+		setMyRides([...data].sort((a, b) => b.id - a.id));
 	};
 
 	useEffect(() => {

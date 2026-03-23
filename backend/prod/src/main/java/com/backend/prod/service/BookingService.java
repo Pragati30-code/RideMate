@@ -12,6 +12,7 @@ import com.backend.prod.repository.RideRepository;
 import com.backend.prod.repository.UserRepository;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class BookingService {
@@ -33,11 +34,15 @@ public class BookingService {
 
     @Transactional
     public Booking createBooking(BookingRequest request, String email) {
-        Ride ride = rideRepository.findById(request.getRideId())
+        Ride ride = rideRepository.findById(Objects.requireNonNull(request.getRideId(), "rideId is required"))
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (bookingRepository.hasOngoingRideBooking(user)) {
+            throw new RuntimeException("You can only have one active booking at a time until that ride ends");
+        }
 
         if (ride.getDriver().getId().equals(user.getId())) {
             throw new RuntimeException("You cannot book your own ride");
@@ -102,12 +107,56 @@ public class BookingService {
         return bookingRepository.findByUser(user);
     }
 
+    public List<Booking> getBookingsForDriverRide(Long rideId, String driverEmail) {
+        User driver = userRepository.findByEmail(driverEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Ride ride = rideRepository.findById(Objects.requireNonNull(rideId, "rideId is required"))
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
+
+        if (!ride.getDriver().getId().equals(driver.getId())) {
+            throw new RuntimeException("You can only view bookings for your own rides");
+        }
+
+        return bookingRepository.findByRideId(rideId);
+    }
+
+    public Booking getMyCurrentBooking(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Booking> currentBookings = bookingRepository.findCurrentBookingsByUser(user);
+        if (currentBookings.isEmpty()) {
+            return null;
+        }
+        return currentBookings.get(0);
+    }
+
+    public List<Booking> getBookingsForRideParticipant(Long rideId, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Ride ride = rideRepository.findById(Objects.requireNonNull(rideId, "rideId is required"))
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
+
+        boolean isDriver = ride.getDriver().getId().equals(user.getId());
+        boolean isPassenger = bookingRepository.findByRideIdAndStatusNot(rideId, "CANCELLED")
+                .stream()
+                .anyMatch(booking -> booking.getUser() != null && booking.getUser().getId().equals(user.getId()));
+
+        if (!isDriver && !isPassenger) {
+            throw new RuntimeException("You can only view bookings for rides you are part of");
+        }
+
+        return bookingRepository.findByRideIdAndStatusNot(rideId, "CANCELLED");
+    }
+
     @Transactional
     public Booking cancelBooking(Long bookingId, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(bookingId, "bookingId is required"))
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         if (!booking.getUser().getId().equals(user.getId())) {
@@ -162,7 +211,7 @@ public class BookingService {
     }
 
     private Booking getBookingAndVerifyDriver(Long bookingId, String driverEmail) {
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(bookingId, "bookingId is required"))
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         User driver = userRepository.findByEmail(driverEmail)

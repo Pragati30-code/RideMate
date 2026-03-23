@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import com.backend.prod.dto.BookingRequest;
 import com.backend.prod.entity.Booking;
 import com.backend.prod.service.BookingService;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -30,6 +31,26 @@ public class BookingController {
     @GetMapping("/my-bookings")
     public List<Booking> getMyBookings(Authentication auth) {
         return bookingService.getMyBookings(auth.getName());
+    }
+
+    @GetMapping("/my-current")
+    public ResponseEntity<Booking> getMyCurrentBooking(Authentication auth) {
+        Booking booking = bookingService.getMyCurrentBooking(auth.getName());
+        if (booking == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(booking);
+    }
+
+    // Driver gets bookings for one of their own rides
+    @GetMapping("/driver/ride/{rideId}")
+    public List<Booking> getBookingsForDriverRide(@PathVariable Long rideId, Authentication auth) {
+        return bookingService.getBookingsForDriverRide(rideId, auth.getName());
+    }
+
+    @GetMapping("/ride/{rideId}/participants")
+    public List<Booking> getBookingsForRideParticipant(@PathVariable Long rideId, Authentication auth) {
+        return bookingService.getBookingsForRideParticipant(rideId, auth.getName());
     }
 
     // Cancel booking (passenger)

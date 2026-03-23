@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Map,
@@ -196,6 +197,14 @@ export default function BookRideSection({
   return (
     <section className="bg-zinc-900/60 border border-white/10 rounded-2xl p-6 space-y-6">
       <h2 className="text-xl font-semibold">Search Rides</h2>
+      <div>
+        <Link
+          href="/my-ride-dashboard"
+          className="inline-flex px-4 py-2 rounded-full border border-sky-400/40 text-sky-300 hover:bg-sky-500/10 transition-colors"
+        >
+          Open My Ride Dashboard
+        </Link>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-2 relative">
@@ -300,7 +309,15 @@ export default function BookRideSection({
       <div className="space-y-3 pt-2">
         <h3 className="text-lg font-semibold">Search Results</h3>
         {searchedRides.length === 0 && <p className="text-sm text-white/60">No searched rides yet.</p>}
-        {searchedRides.map(({ ride, estimatedFare, segmentDistanceKm }) => (
+        {searchedRides.map(({ ride, estimatedFare, segmentDistanceKm }) => {
+          const seatsValue = Math.max(1, Number(seatsByRide[ride.id] ?? "1") || 1);
+          const totalFare = estimatedFare * seatsValue;
+          const seatsExceeded =
+            typeof ride.availableSeats === "number" && ride.availableSeats > 0
+              ? seatsValue > ride.availableSeats
+              : false;
+
+          return (
           <div key={ride.id} className="border border-white/10 rounded-xl p-4 bg-zinc-950/40">
             <p className="font-semibold">
               {ride.source} to {ride.destination}
@@ -308,8 +325,14 @@ export default function BookRideSection({
             <p className="text-sm text-white/60">
               Seats: {ride.availableSeats ?? "-"} | Status: {ride.status ?? "-"}
             </p>
+            <p className="text-sm text-white/60">
+              Driver: {ride.driver?.name || "-"} ({ride.driver?.email || "-"})
+            </p>
             <p className="text-sm text-emerald-300">
-              Estimated Fare: Rs {Number(estimatedFare).toFixed(2)} | Segment: {Number(segmentDistanceKm).toFixed(2)} km
+              Fare for 1 seat: Rs {Number(estimatedFare).toFixed(2)} | Segment: {Number(segmentDistanceKm).toFixed(2)} km
+            </p>
+            <p className="text-sm text-emerald-300">
+              Total Fare ({seatsValue} seat{seatsValue > 1 ? "s" : ""}): Rs {Number(totalFare).toFixed(2)}
             </p>
             {ride.departureTime && (
               <p className="text-sm text-white/60">
@@ -338,7 +361,8 @@ export default function BookRideSection({
                 disabled={
                   bookingRideId === ride.id ||
                   ride.status !== "ACTIVE" ||
-                  (ride.availableSeats ?? 0) <= 0
+                  (ride.availableSeats ?? 0) <= 0 ||
+                  seatsExceeded
                 }
                 className="px-4 py-2 rounded-full bg-white text-black font-semibold disabled:opacity-50"
               >
@@ -346,13 +370,19 @@ export default function BookRideSection({
               </button>
             </div>
 
+            {seatsExceeded && (
+              <p className="text-xs text-red-300 mt-2">
+                Selected seats exceed available seats for this ride.
+              </p>
+            )}
+
             {ride.status !== "ACTIVE" && (
               <p className="text-xs text-amber-300 mt-2">
                 This ride is currently {ride.status}. Booking is available only for ACTIVE rides.
               </p>
             )}
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="space-y-3 pt-2">
@@ -365,6 +395,9 @@ export default function BookRideSection({
             </p>
             <p className="text-sm text-white/60">
               Seats: {ride.availableSeats ?? "-"} | Status: {ride.status ?? "-"}
+            </p>
+            <p className="text-sm text-white/60">
+              Driver: {ride.driver?.name || "-"} ({ride.driver?.email || "-"})
             </p>
             {typeof ride.distanceKm === "number" && (
               <p className="text-sm text-white/60">Distance: {ride.distanceKm.toFixed(2)} km</p>
