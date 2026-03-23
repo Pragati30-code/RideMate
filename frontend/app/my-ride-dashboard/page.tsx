@@ -229,7 +229,14 @@ export default function MyRideDashboardPage() {
 
         {currentBooking && (
           <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section>
+              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-900/70 px-4 py-2">
+                <p className="text-xs uppercase tracking-wide text-white/50">Ride ID</p>
+                <p className="text-sm font-semibold text-white/90">#{currentBooking.ride.id}</p>
+              </div>
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4">
                 <p className="text-xs uppercase tracking-wide text-white/50">Ride Route</p>
                 <div className="mt-3 space-y-2 text-sm">
@@ -244,19 +251,7 @@ export default function MyRideDashboardPage() {
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-white/50">Booking Status</p>
-                <p className="mt-2 font-semibold">{currentBooking.status}</p>
-                <p className="text-sm text-white/60">Ride #{currentBooking.ride.id}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-white/50">Seats + Fare</p>
-                <p className="mt-2 font-semibold">{currentBooking.seatsBooked} seat(s)</p>
-                <p className="text-sm text-white/60">
-                  Rs {typeof currentBooking.estimatedFare === "number" ? currentBooking.estimatedFare.toFixed(2) : "-"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4">
-                <p className="text-xs uppercase tracking-wide text-white/50">Driver</p>
+                <p className="text-xs uppercase tracking-wide text-white/50">Driver Details</p>
                 <p className="mt-2 font-semibold">{currentBooking.ride.driver?.name || "-"}</p>
                 <p className="text-sm text-white/60">{currentBooking.ride.driver?.email || "-"}</p>
               </div>
@@ -267,6 +262,9 @@ export default function MyRideDashboardPage() {
                 <p className="text-xs uppercase tracking-wide text-white/50">Your Stops</p>
                 <p className="font-medium">Pickup: {currentBooking.pickupName || "-"}</p>
                 <p className="text-white/75">Drop: {currentBooking.dropName || "-"}</p>
+                <p className="text-white/80">
+                  Seats + Fare: {currentBooking.seatsBooked} seat(s) | Rs {typeof currentBooking.estimatedFare === "number" ? currentBooking.estimatedFare.toFixed(2) : "-"}
+                </p>
                 <p className="text-sm text-white/60">Ride status: {currentBooking.ride.status ?? "-"}</p>
               </div>
 
