@@ -7,7 +7,7 @@ import DashboardHeader from "./components/DashboardHeader";
 import ModeSwitch from "./components/ModeSwitch";
 import BookRideSection from "./components/BookRideSection";
 import MakeRideSection from "./components/MakeRideSection";
-import { DashboardMode, DriverStatus, Ride, defaultDriverStatus } from "./types";
+import { DashboardMode, DriverStatus, Ride, SearchRideResult, defaultDriverStatus } from "./types";
 
 export default function DashboardPage() {
 	const router = useRouter();
@@ -20,8 +20,14 @@ export default function DashboardPage() {
 
 	const [searchSource, setSearchSource] = useState("");
 	const [searchDestination, setSearchDestination] = useState("");
-	const [searchedRides, setSearchedRides] = useState<Ride[]>([]);
+	const [searchSourceLatitude, setSearchSourceLatitude] = useState("");
+	const [searchSourceLongitude, setSearchSourceLongitude] = useState("");
+	const [searchDestinationLatitude, setSearchDestinationLatitude] = useState("");
+	const [searchDestinationLongitude, setSearchDestinationLongitude] = useState("");
+	const [searchedRides, setSearchedRides] = useState<SearchRideResult[]>([]);
 	const [activeRides, setActiveRides] = useState<Ride[]>([]);
+	const [myRides, setMyRides] = useState<Ride[]>([]);
+	const [bookingRideId, setBookingRideId] = useState<number | null>(null);
 
 	const [vehicleNumber, setVehicleNumber] = useState("");
 	const [drivingLicense, setDrivingLicense] = useState("");
@@ -35,8 +41,8 @@ export default function DashboardPage() {
 	const [destinationLongitude, setDestinationLongitude] = useState("");
 	const [departureTime, setDepartureTime] = useState("");
 	const [availableSeats, setAvailableSeats] = useState("");
-	const [ridePrice, setRidePrice] = useState("");
 	const [creatingRide, setCreatingRide] = useState(false);
+	const [rideActionLoadingId, setRideActionLoadingId] = useState<number | null>(null);
 
 	const fetchDriverStatus = async () => {
 		const res = await fetch(apiUrl("/users/driver-status"), {
@@ -72,6 +78,22 @@ export default function DashboardPage() {
 		setActiveRides(data);
 	};
 
+	const fetchMyRides = async () => {
+		const res = await fetch(apiUrl("/rides/my-rides"), {
+			method: "GET",
+			headers: {
+				...getAuthHeaders(),
+			},
+		});
+
+		if (!res.ok) {
+			throw new Error("Could not load your rides");
+		}
+
+		const data = (await res.json()) as Ride[];
+		setMyRides(data);
+	};
+
 	useEffect(() => {
 		const token = getAuthToken();
 		if (!token) {
@@ -82,8 +104,7 @@ export default function DashboardPage() {
 		const init = async () => {
 			setLoading(true);
 			try {
-				await fetchDriverStatus();
-				await fetchActiveRides();
+				await Promise.all([fetchDriverStatus(), fetchActiveRides(), fetchMyRides()]);
 			} catch (e) {
 				setError("Session expired. Please login again.");
 				clearAuthSession();
@@ -101,6 +122,21 @@ export default function DashboardPage() {
 		setError("");
 		setSearchedRides([]);
 
+		const parsedSourceLatitude = searchSourceLatitude ? Number(searchSourceLatitude) : NaN;
+		const parsedSourceLongitude = searchSourceLongitude ? Number(searchSourceLongitude) : NaN;
+		const parsedDestinationLatitude = searchDestinationLatitude ? Number(searchDestinationLatitude) : NaN;
+		const parsedDestinationLongitude = searchDestinationLongitude ? Number(searchDestinationLongitude) : NaN;
+
+		if (
+			Number.isNaN(parsedSourceLatitude) ||
+			Number.isNaN(parsedSourceLongitude) ||
+			Number.isNaN(parsedDestinationLatitude) ||
+			Number.isNaN(parsedDestinationLongitude)
+		) {
+			setError("Please select source and destination from suggestions to search by location.");
+			return;
+		}
+
 		try {
 			const res = await fetch(apiUrl("/rides/search"), {
 				method: "POST",
@@ -110,7 +146,11 @@ export default function DashboardPage() {
 				},
 				body: JSON.stringify({
 					source: searchSource,
+					sourceLatitude: parsedSourceLatitude,
+					sourceLongitude: parsedSourceLongitude,
 					destination: searchDestination,
+					destinationLatitude: parsedDestinationLatitude,
+					destinationLongitude: parsedDestinationLongitude,
 				}),
 			});
 
@@ -119,7 +159,7 @@ export default function DashboardPage() {
 				return;
 			}
 
-			const data = (await res.json()) as Ride[];
+			const data = (await res.json()) as SearchRideResult[];
 			setSearchedRides(data);
 			setMessage(data.length ? "Rides found" : "No rides found for this route");
 		} catch (e) {
@@ -156,20 +196,79 @@ export default function DashboardPage() {
 		}
 	};
 
+	const handleBookRide = async (rideId: number, seats: number) => {
+		setMessage("");
+		setError("");
+
+		if (!Number.isFinite(seats) || seats <= 0) {
+			setError("Please enter valid seats to book.");
+			return;
+		}
+
+		const parsedPickupLatitude = searchSourceLatitude ? Number(searchSourceLatitude) : NaN;
+		const parsedPickupLongitude = searchSourceLongitude ? Number(searchSourceLongitude) : NaN;
+		const parsedDropLatitude = searchDestinationLatitude ? Number(searchDestinationLatitude) : NaN;
+		const parsedDropLongitude = searchDestinationLongitude ? Number(searchDestinationLongitude) : NaN;
+
+		if (
+			Number.isNaN(parsedPickupLatitude) ||
+			Number.isNaN(parsedPickupLongitude) ||
+			Number.isNaN(parsedDropLatitude) ||
+			Number.isNaN(parsedDropLongitude)
+		) {
+			setError("Select source and destination from suggestions before booking.");
+			return;
+		}
+
+		setBookingRideId(rideId);
+
+		try {
+			const res = await fetch(apiUrl("/bookings"), {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...getAuthHeaders(),
+				},
+				body: JSON.stringify({
+					rideId,
+					seats,
+					pickupName: searchSource,
+					pickupLatitude: parsedPickupLatitude,
+					pickupLongitude: parsedPickupLongitude,
+					dropName: searchDestination,
+					dropLatitude: parsedDropLatitude,
+					dropLongitude: parsedDropLongitude,
+				}),
+			});
+
+			if (!res.ok) {
+				setError("Unable to book ride. Please verify seats and ride status.");
+				return;
+			}
+
+			setMessage("Ride booked successfully.");
+			await Promise.all([fetchActiveRides(), fetchMyRides()]);
+			await handleSearchRides();
+		} catch (e) {
+			setError("Unable to book ride.");
+		} finally {
+			setBookingRideId(null);
+		}
+	};
+
 	const handleCreateRide = async () => {
 		setMessage("");
 		setError("");
 		setCreatingRide(true);
 
 		const parsedSeats = Number(availableSeats);
-		const parsedPrice = Number(ridePrice);
 		const parsedSourceLatitude = sourceLatitude ? Number(sourceLatitude) : null;
 		const parsedSourceLongitude = sourceLongitude ? Number(sourceLongitude) : null;
 		const parsedDestinationLatitude = destinationLatitude ? Number(destinationLatitude) : null;
 		const parsedDestinationLongitude = destinationLongitude ? Number(destinationLongitude) : null;
 
-		if (!parsedSeats || !parsedPrice || parsedSeats <= 0 || parsedPrice <= 0) {
-			setError("Please enter valid values for available seats and price.");
+		if (!parsedSeats || parsedSeats <= 0) {
+			setError("Please enter a valid value for available seats.");
 			setCreatingRide(false);
 			return;
 		}
@@ -209,6 +308,17 @@ export default function DashboardPage() {
 			return;
 		}
 
+		if (
+			parsedSourceLatitude === null ||
+			parsedSourceLongitude === null ||
+			parsedDestinationLatitude === null ||
+			parsedDestinationLongitude === null
+		) {
+			setError("Source and destination coordinates are required to create a ride.");
+			setCreatingRide(false);
+			return;
+		}
+
 		try {
 			const res = await fetch(apiUrl("/rides"), {
 				method: "POST",
@@ -225,7 +335,6 @@ export default function DashboardPage() {
 					destinationLongitude: parsedDestinationLongitude,
 					departureTime,
 					availableSeats: parsedSeats,
-					price: parsedPrice,
 				}),
 			});
 
@@ -235,7 +344,7 @@ export default function DashboardPage() {
 			}
 
 			setMessage("Ride created successfully.");
-			await fetchActiveRides();
+			await Promise.all([fetchActiveRides(), fetchMyRides()]);
 			setRideSource("");
 			setRideDestination("");
 			setSourceLatitude("");
@@ -244,11 +353,64 @@ export default function DashboardPage() {
 			setDestinationLongitude("");
 			setDepartureTime("");
 			setAvailableSeats("");
-			setRidePrice("");
 		} catch (e) {
 			setError("Unable to create ride.");
 		} finally {
 			setCreatingRide(false);
+		}
+	};
+
+	const handleStartRide = async (rideId: number) => {
+		setMessage("");
+		setError("");
+		setRideActionLoadingId(rideId);
+
+		try {
+			const res = await fetch(apiUrl(`/rides/${rideId}/start`), {
+				method: "POST",
+				headers: {
+					...getAuthHeaders(),
+				},
+			});
+
+			if (!res.ok) {
+				setError("Unable to start ride.");
+				return;
+			}
+
+			setMessage("Ride started.");
+			await Promise.all([fetchActiveRides(), fetchMyRides()]);
+		} catch (e) {
+			setError("Unable to start ride.");
+		} finally {
+			setRideActionLoadingId(null);
+		}
+	};
+
+	const handleEndRide = async (rideId: number) => {
+		setMessage("");
+		setError("");
+		setRideActionLoadingId(rideId);
+
+		try {
+			const res = await fetch(apiUrl(`/rides/${rideId}/end`), {
+				method: "POST",
+				headers: {
+					...getAuthHeaders(),
+				},
+			});
+
+			if (!res.ok) {
+				setError("Unable to end ride.");
+				return;
+			}
+
+			setMessage("Ride ended.");
+			await Promise.all([fetchActiveRides(), fetchMyRides()]);
+		} catch (e) {
+			setError("Unable to end ride.");
+		} finally {
+			setRideActionLoadingId(null);
 		}
 	};
 
@@ -274,11 +436,21 @@ export default function DashboardPage() {
 					<BookRideSection
 						searchSource={searchSource}
 						searchDestination={searchDestination}
+						searchSourceLatitude={searchSourceLatitude}
+						searchSourceLongitude={searchSourceLongitude}
+						searchDestinationLatitude={searchDestinationLatitude}
+						searchDestinationLongitude={searchDestinationLongitude}
 						searchedRides={searchedRides}
 						activeRides={activeRides}
 						onSearchSourceChange={setSearchSource}
 						onSearchDestinationChange={setSearchDestination}
+						onSearchSourceLatitudeChange={setSearchSourceLatitude}
+						onSearchSourceLongitudeChange={setSearchSourceLongitude}
+						onSearchDestinationLatitudeChange={setSearchDestinationLatitude}
+						onSearchDestinationLongitudeChange={setSearchDestinationLongitude}
 						onSearch={handleSearchRides}
+						onBookRide={handleBookRide}
+						bookingRideId={bookingRideId}
 					/>
 				)}
 
@@ -296,8 +468,9 @@ export default function DashboardPage() {
 						destinationLongitude={destinationLongitude}
 						departureTime={departureTime}
 						availableSeats={availableSeats}
-						ridePrice={ridePrice}
+						myRides={myRides}
 						creatingRide={creatingRide}
+						rideActionLoadingId={rideActionLoadingId}
 						onVehicleNumberChange={setVehicleNumber}
 						onDrivingLicenseChange={setDrivingLicense}
 						onSubmitVerification={handleSubmitVerification}
@@ -309,8 +482,9 @@ export default function DashboardPage() {
 						onDestinationLongitudeChange={setDestinationLongitude}
 						onDepartureTimeChange={setDepartureTime}
 						onAvailableSeatsChange={setAvailableSeats}
-						onRidePriceChange={setRidePrice}
 						onCreateRide={handleCreateRide}
+						onStartRide={handleStartRide}
+						onEndRide={handleEndRide}
 					/>
 				)}
 			</main>

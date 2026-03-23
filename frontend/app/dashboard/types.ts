@@ -11,11 +11,21 @@ export type DriverStatus = {
 export type Ride = {
   id: number;
   source: string;
+  sourceLatitude?: number;
+  sourceLongitude?: number;
   destination: string;
+  destinationLatitude?: number;
+  destinationLongitude?: number;
   departureTime?: string;
   availableSeats?: number;
-  price?: number;
+  distanceKm?: number;
   status?: string;
+};
+
+export type SearchRideResult = {
+  ride: Ride;
+  estimatedFare: number;
+  segmentDistanceKm: number;
 };
 
 export const defaultDriverStatus: DriverStatus = {

@@ -20,10 +20,10 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
-    // Book a ride
+    // Book a ride — request must include pickupLatitude/Longitude and dropLatitude/Longitude
     @PostMapping
     public Booking createBooking(@RequestBody BookingRequest request, Authentication auth) {
-        return bookingService.createBooking(request.getRideId(), auth.getName(), request.getSeats());
+        return bookingService.createBooking(request, auth.getName());
     }
 
     // Get my bookings
@@ -32,9 +32,21 @@ public class BookingController {
         return bookingService.getMyBookings(auth.getName());
     }
 
-    // Cancel booking
+    // Cancel booking (passenger)
     @PutMapping("/{bookingId}/cancel")
     public Booking cancelBooking(@PathVariable Long bookingId, Authentication auth) {
         return bookingService.cancelBooking(bookingId, auth.getName());
+    }
+
+    // Driver marks passenger as picked up
+    @PutMapping("/{bookingId}/pickup")
+    public Booking markPickedUp(@PathVariable Long bookingId, Authentication auth) {
+        return bookingService.markPickedUp(bookingId, auth.getName());
+    }
+
+    // Driver marks passenger as dropped off
+    @PutMapping("/{bookingId}/drop")
+    public Booking markDropped(@PathVariable Long bookingId, Authentication auth) {
+        return bookingService.markDropped(bookingId, auth.getName());
     }
 }

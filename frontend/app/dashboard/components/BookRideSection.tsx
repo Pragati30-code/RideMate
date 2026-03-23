@@ -8,7 +8,7 @@ import {
   MarkerLabel,
   type MapRef,
 } from "@/components/ui/map";
-import { Ride } from "../types";
+import { Ride, SearchRideResult } from "../types";
 
 type NominatimSuggestion = {
   display_name: string;
@@ -26,49 +26,66 @@ function parseCoordinate(value: string): number | null {
 type BookRideSectionProps = {
   searchSource: string;
   searchDestination: string;
-  searchedRides: Ride[];
+  searchSourceLatitude: string;
+  searchSourceLongitude: string;
+  searchDestinationLatitude: string;
+  searchDestinationLongitude: string;
+  searchedRides: SearchRideResult[];
   activeRides: Ride[];
   onSearchSourceChange: (value: string) => void;
   onSearchDestinationChange: (value: string) => void;
+  onSearchSourceLatitudeChange: (value: string) => void;
+  onSearchSourceLongitudeChange: (value: string) => void;
+  onSearchDestinationLatitudeChange: (value: string) => void;
+  onSearchDestinationLongitudeChange: (value: string) => void;
   onSearch: () => void;
+  onBookRide: (rideId: number, seats: number) => void;
+  bookingRideId: number | null;
 };
 
 export default function BookRideSection({
   searchSource,
   searchDestination,
+  searchSourceLatitude,
+  searchSourceLongitude,
+  searchDestinationLatitude,
+  searchDestinationLongitude,
   searchedRides,
   activeRides,
   onSearchSourceChange,
   onSearchDestinationChange,
+  onSearchSourceLatitudeChange,
+  onSearchSourceLongitudeChange,
+  onSearchDestinationLatitudeChange,
+  onSearchDestinationLongitudeChange,
   onSearch,
+  onBookRide,
+  bookingRideId,
 }: BookRideSectionProps) {
   const [sourceSuggestions, setSourceSuggestions] = useState<NominatimSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<NominatimSuggestion[]>([]);
   const [isSearchingSource, setIsSearchingSource] = useState(false);
   const [isSearchingDestination, setIsSearchingDestination] = useState(false);
-  const [sourceLatitude, setSourceLatitude] = useState("");
-  const [sourceLongitude, setSourceLongitude] = useState("");
-  const [destinationLatitude, setDestinationLatitude] = useState("");
-  const [destinationLongitude, setDestinationLongitude] = useState("");
+  const [seatsByRide, setSeatsByRide] = useState<Record<number, string>>({});
   const mapRef = useRef<MapRef | null>(null);
 
   const sourcePoint = useMemo(() => {
-    const latitude = parseCoordinate(sourceLatitude);
-    const longitude = parseCoordinate(sourceLongitude);
+    const latitude = parseCoordinate(searchSourceLatitude);
+    const longitude = parseCoordinate(searchSourceLongitude);
     if (latitude === null || longitude === null) {
       return null;
     }
     return { latitude, longitude };
-  }, [sourceLatitude, sourceLongitude]);
+  }, [searchSourceLatitude, searchSourceLongitude]);
 
   const destinationPoint = useMemo(() => {
-    const latitude = parseCoordinate(destinationLatitude);
-    const longitude = parseCoordinate(destinationLongitude);
+    const latitude = parseCoordinate(searchDestinationLatitude);
+    const longitude = parseCoordinate(searchDestinationLongitude);
     if (latitude === null || longitude === null) {
       return null;
     }
     return { latitude, longitude };
-  }, [destinationLatitude, destinationLongitude]);
+  }, [searchDestinationLatitude, searchDestinationLongitude]);
 
   const routeCoordinates = useMemo<[number, number][]>(() => {
     if (!sourcePoint || !destinationPoint) {
@@ -164,15 +181,15 @@ export default function BookRideSection({
 
   const selectSourceSuggestion = (suggestion: NominatimSuggestion) => {
     onSearchSourceChange(suggestion.display_name);
-    setSourceLatitude(suggestion.lat);
-    setSourceLongitude(suggestion.lon);
+    onSearchSourceLatitudeChange(suggestion.lat);
+    onSearchSourceLongitudeChange(suggestion.lon);
     setSourceSuggestions([]);
   };
 
   const selectDestinationSuggestion = (suggestion: NominatimSuggestion) => {
     onSearchDestinationChange(suggestion.display_name);
-    setDestinationLatitude(suggestion.lat);
-    setDestinationLongitude(suggestion.lon);
+    onSearchDestinationLatitudeChange(suggestion.lat);
+    onSearchDestinationLongitudeChange(suggestion.lon);
     setDestinationSuggestions([]);
   };
 
@@ -187,8 +204,8 @@ export default function BookRideSection({
             value={searchSource}
             onChange={(e) => {
               onSearchSourceChange(e.target.value);
-              setSourceLatitude("");
-              setSourceLongitude("");
+              onSearchSourceLatitudeChange("");
+              onSearchSourceLongitudeChange("");
             }}
             placeholder="Source"
             className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
@@ -216,8 +233,8 @@ export default function BookRideSection({
             value={searchDestination}
             onChange={(e) => {
               onSearchDestinationChange(e.target.value);
-              setDestinationLatitude("");
-              setDestinationLongitude("");
+              onSearchDestinationLatitudeChange("");
+              onSearchDestinationLongitudeChange("");
             }}
             placeholder="Destination"
             className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
@@ -283,17 +300,55 @@ export default function BookRideSection({
       <div className="space-y-3 pt-2">
         <h3 className="text-lg font-semibold">Search Results</h3>
         {searchedRides.length === 0 && <p className="text-sm text-white/60">No searched rides yet.</p>}
-        {searchedRides.map((ride) => (
+        {searchedRides.map(({ ride, estimatedFare, segmentDistanceKm }) => (
           <div key={ride.id} className="border border-white/10 rounded-xl p-4 bg-zinc-950/40">
             <p className="font-semibold">
               {ride.source} to {ride.destination}
             </p>
             <p className="text-sm text-white/60">
-              Seats: {ride.availableSeats ?? "-"} | Price: Rs {ride.price ?? "-"}
+              Seats: {ride.availableSeats ?? "-"} | Status: {ride.status ?? "-"}
+            </p>
+            <p className="text-sm text-emerald-300">
+              Estimated Fare: Rs {Number(estimatedFare).toFixed(2)} | Segment: {Number(segmentDistanceKm).toFixed(2)} km
             </p>
             {ride.departureTime && (
               <p className="text-sm text-white/60">
                 Departure: {new Date(ride.departureTime).toLocaleString()}
+              </p>
+            )}
+
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label className="block text-xs text-white/60">Seats</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={seatsByRide[ride.id] ?? "1"}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setSeatsByRide((prev) => ({ ...prev, [ride.id]: next }));
+                  }}
+                  className="w-24 bg-zinc-800 border border-white/10 rounded-lg px-3 py-2"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onBookRide(ride.id, Number(seatsByRide[ride.id] ?? "1"))}
+                disabled={
+                  bookingRideId === ride.id ||
+                  ride.status !== "ACTIVE" ||
+                  (ride.availableSeats ?? 0) <= 0
+                }
+                className="px-4 py-2 rounded-full bg-white text-black font-semibold disabled:opacity-50"
+              >
+                {bookingRideId === ride.id ? "Booking..." : "Book Ride"}
+              </button>
+            </div>
+
+            {ride.status !== "ACTIVE" && (
+              <p className="text-xs text-amber-300 mt-2">
+                This ride is currently {ride.status}. Booking is available only for ACTIVE rides.
               </p>
             )}
           </div>
@@ -309,8 +364,11 @@ export default function BookRideSection({
               {ride.source} to {ride.destination}
             </p>
             <p className="text-sm text-white/60">
-              Seats: {ride.availableSeats ?? "-"} | Price: Rs {ride.price ?? "-"}
+              Seats: {ride.availableSeats ?? "-"} | Status: {ride.status ?? "-"}
             </p>
+            {typeof ride.distanceKm === "number" && (
+              <p className="text-sm text-white/60">Distance: {ride.distanceKm.toFixed(2)} km</p>
+            )}
             {ride.departureTime && (
               <p className="text-sm text-white/60">
                 Departure: {new Date(ride.departureTime).toLocaleString()}
