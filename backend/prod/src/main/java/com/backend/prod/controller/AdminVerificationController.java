@@ -30,7 +30,10 @@ public class AdminVerificationController {
                         "name", user.getName(),
                         "email", user.getEmail(),
                         "studentId", user.getStudentId() != null ? user.getStudentId() : "",
+                    "gender", user.getGender() != null ? user.getGender() : "",
+                    "phoneNumber", user.getPhoneNumber() != null ? user.getPhoneNumber() : "",
                         "vehicleNumber", user.getVehicleNumber() != null ? user.getVehicleNumber() : "",
+                    "vehicleModel", user.getVehicleModel() != null ? user.getVehicleModel() : "",
                         "drivingLicense", user.getDrivingLicense() != null ? user.getDrivingLicense() : "",
                         "verificationStatus", user.getVerificationStatus() != null ? user.getVerificationStatus().name() : ""
                 ))

@@ -254,6 +254,11 @@ export default function MyRideDashboardPage() {
                 <p className="text-xs uppercase tracking-wide text-white/50">Driver Details</p>
                 <p className="mt-2 font-semibold">{currentBooking.ride.driver?.name || "-"}</p>
                 <p className="text-sm text-white/60">{currentBooking.ride.driver?.email || "-"}</p>
+                <p className="text-sm text-white/60">Phone: {currentBooking.ride.driver?.phoneNumber || "-"}</p>
+                <p className="text-sm text-white/60">Gender: {currentBooking.ride.driver?.gender || "-"}</p>
+                <p className="text-sm text-white/60">
+                  Vehicle: {currentBooking.ride.driver?.vehicleNumber || "-"} ({currentBooking.ride.driver?.vehicleModel || "-"})
+                </p>
               </div>
             </section>
 

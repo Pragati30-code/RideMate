@@ -197,14 +197,6 @@ export default function BookRideSection({
   return (
     <section className="bg-zinc-900/60 border border-white/10 rounded-2xl p-6 space-y-6">
       <h2 className="text-xl font-semibold">Search Rides</h2>
-      <div>
-        <Link
-          href="/my-ride-dashboard"
-          className="inline-flex px-4 py-2 rounded-full border border-sky-400/40 text-sky-300 hover:bg-sky-500/10 transition-colors"
-        >
-          Open My Ride Dashboard
-        </Link>
-      </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-2 relative">
@@ -327,6 +319,12 @@ export default function BookRideSection({
             </p>
             <p className="text-sm text-white/60">
               Driver: {ride.driver?.name || "-"} ({ride.driver?.email || "-"})
+            </p>
+            <p className="text-sm text-white/60">
+              Gender: {ride.driver?.gender || "-"} | Phone: {ride.driver?.phoneNumber || "-"}
+            </p>
+            <p className="text-sm text-white/60">
+              Vehicle: {ride.driver?.vehicleNumber || "-"} ({ride.driver?.vehicleModel || "-"})
             </p>
             <p className="text-sm text-emerald-300">
               Fare for 1 seat: Rs {Number(estimatedFare).toFixed(2)} | Segment: {Number(segmentDistanceKm).toFixed(2)} km

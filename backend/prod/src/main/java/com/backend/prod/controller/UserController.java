@@ -35,6 +35,7 @@ public class UserController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setVehicleNumber(request.getVehicleNumber());
+        user.setVehicleModel(request.getVehicleModel());
         user.setDrivingLicense(request.getDrivingLicense());
         user.setVerificationStatus(DriverVerificationStatus.PENDING);
         user.setVerifiedDriver(false);
@@ -53,8 +54,11 @@ public class UserController {
                 "isVerifiedDriver", user.isVerifiedDriver(),
                 "verificationStatus", user.getVerificationStatus() != null ? user.getVerificationStatus().name() : "",
                 "vehicleNumber", user.getVehicleNumber() != null ? user.getVehicleNumber() : "",
+                "vehicleModel", user.getVehicleModel() != null ? user.getVehicleModel() : "",
                 "drivingLicense", user.getDrivingLicense() != null ? user.getDrivingLicense() : "",
-                "detailsSubmitted", user.getVehicleNumber() != null && user.getDrivingLicense() != null
+                "detailsSubmitted", user.getVehicleNumber() != null
+                    && user.getVehicleModel() != null
+                    && user.getDrivingLicense() != null
         );
     }
 }

@@ -170,6 +170,18 @@ export default function RegisterPage(){
               </div>
 
               <div>
+                <label className="block text-white/70 text-sm mb-2">Phone Number</label>
+                <input
+                  {...register("phoneNumber")}
+                  placeholder="9876543210"
+                  className="w-full bg-zinc-800/50 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 transition-all"
+                />
+                {errors.phoneNumber && (
+                  <p className="text-red-400 text-sm mt-2">{errors.phoneNumber.message}</p>
+                )}
+              </div>
+
+              <div>
                 <label className="block text-white/70 text-sm mb-2">Student ID</label>
                 <input
                   {...register("studentId")}

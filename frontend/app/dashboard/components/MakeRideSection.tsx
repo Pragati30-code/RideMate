@@ -27,6 +27,7 @@ type NominatimSuggestion = {
 type MakeRideSectionProps = {
   driverStatus: DriverStatus;
   vehicleNumber: string;
+  vehicleModel: string;
   drivingLicense: string;
   submittingVerification: boolean;
   rideSource: string;
@@ -39,8 +40,8 @@ type MakeRideSectionProps = {
   availableSeats: string;
   myRides: Ride[];
   creatingRide: boolean;
-  rideActionLoadingId: number | null;
   onVehicleNumberChange: (value: string) => void;
+  onVehicleModelChange: (value: string) => void;
   onDrivingLicenseChange: (value: string) => void;
   onSubmitVerification: () => void;
   onRideSourceChange: (value: string) => void;
@@ -52,13 +53,12 @@ type MakeRideSectionProps = {
   onDepartureTimeChange: (value: string) => void;
   onAvailableSeatsChange: (value: string) => void;
   onCreateRide: () => void;
-  onStartRide: (rideId: number) => void;
-  onEndRide: (rideId: number) => void;
 };
 
 export default function MakeRideSection({
   driverStatus,
   vehicleNumber,
+  vehicleModel,
   drivingLicense,
   submittingVerification,
   rideSource,
@@ -71,8 +71,8 @@ export default function MakeRideSection({
   availableSeats,
   myRides,
   creatingRide,
-  rideActionLoadingId,
   onVehicleNumberChange,
+  onVehicleModelChange,
   onDrivingLicenseChange,
   onSubmitVerification,
   onRideSourceChange,
@@ -84,8 +84,6 @@ export default function MakeRideSection({
   onDepartureTimeChange,
   onAvailableSeatsChange,
   onCreateRide,
-  onStartRide,
-  onEndRide,
 }: MakeRideSectionProps) {
   const [sourceSuggestions, setSourceSuggestions] = useState<NominatimSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<NominatimSuggestion[]>([]);
@@ -252,19 +250,28 @@ export default function MakeRideSection({
         <div className="border border-yellow-500/40 bg-yellow-500/10 rounded-xl p-4 space-y-3">
           <p className="font-medium">Driver verification required</p>
           <p className="text-sm text-white/70">
-            Before making rides, submit your driving license and vehicle number for admin verification.
+            Before making rides, submit your driving license, vehicle number, and vehicle model for admin verification.
           </p>
           <p className="text-sm text-white/70">
             Current status: {driverStatus.verificationStatus || "NOT_SUBMITTED"}
           </p>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="block text-sm text-white/70">Vehicle Number</label>
               <input
                 value={vehicleNumber}
                 onChange={(e) => onVehicleNumberChange(e.target.value)}
                 placeholder="Vehicle Number"
+                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm text-white/70">Vehicle Model</label>
+              <input
+                value={vehicleModel}
+                onChange={(e) => onVehicleModelChange(e.target.value)}
+                placeholder="Vehicle Model"
                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
               />
             </div>
@@ -281,7 +288,7 @@ export default function MakeRideSection({
 
           <button
             onClick={onSubmitVerification}
-            disabled={submittingVerification || !vehicleNumber || !drivingLicense}
+            disabled={submittingVerification || !vehicleNumber || !vehicleModel || !drivingLicense}
             className="bg-white text-black font-semibold px-5 py-3 rounded-full disabled:opacity-50"
           >
             {submittingVerification ? "Submitting..." : "Submit for Verification"}
@@ -463,28 +470,6 @@ export default function MakeRideSection({
                   >
                     Track Passengers
                   </Link>
-
-                  {(ride.status === "ACTIVE" || ride.status === "FULL") && (
-                    <button
-                      type="button"
-                      onClick={() => onStartRide(ride.id)}
-                      disabled={rideActionLoadingId === ride.id}
-                      className="px-4 py-2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 disabled:opacity-60"
-                    >
-                      {rideActionLoadingId === ride.id ? "Starting..." : "Start Ride"}
-                    </button>
-                  )}
-
-                  {ride.status === "IN_PROGRESS" && (
-                    <button
-                      type="button"
-                      onClick={() => onEndRide(ride.id)}
-                      disabled={rideActionLoadingId === ride.id}
-                      className="px-4 py-2 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 disabled:opacity-60"
-                    >
-                      {rideActionLoadingId === ride.id ? "Ending..." : "End Ride"}
-                    </button>
-                  )}
                 </div>
               </div>
             ))}

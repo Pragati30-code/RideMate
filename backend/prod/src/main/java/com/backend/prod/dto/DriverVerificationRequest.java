@@ -3,6 +3,7 @@ package com.backend.prod.dto;
 public class DriverVerificationRequest {
     
     private String vehicleNumber;
+    private String vehicleModel;
     private String drivingLicense;
 
     public String getVehicleNumber() {
@@ -11,6 +12,14 @@ public class DriverVerificationRequest {
 
     public void setVehicleNumber(String vehicleNumber) {
         this.vehicleNumber = vehicleNumber;
+    }
+
+    public String getVehicleModel() {
+        return vehicleModel;
+    }
+
+    public void setVehicleModel(String vehicleModel) {
+        this.vehicleModel = vehicleModel;
     }
 
     public String getDrivingLicense() {

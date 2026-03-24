@@ -10,9 +10,11 @@ type UserProfile = {
 	id: number;
 	name: string;
 	email: string;
+	phoneNumber?: string;
 	studentId?: string;
 	gender?: string;
 	vehicleNumber?: string;
+	vehicleModel?: string;
 	drivingLicense?: string;
 	verifiedDriver?: boolean;
 	role?: string;
@@ -23,6 +25,7 @@ type DriverStatus = {
 	isVerifiedDriver: boolean;
 	verificationStatus: string;
 	vehicleNumber: string;
+	vehicleModel: string;
 	drivingLicense: string;
 	detailsSubmitted: boolean;
 };
@@ -136,12 +139,14 @@ export default function UserProfilePage() {
 					<div className="grid md:grid-cols-2 gap-4 text-sm">
 						<ProfileItem label="Name" value={profile.name} />
 						<ProfileItem label="Email" value={profile.email} />
+						<ProfileItem label="Phone Number" value={profile.phoneNumber || "-"} />
 						<ProfileItem label="Student ID" value={profile.studentId || "-"} />
 						<ProfileItem label="Gender" value={profile.gender || "-"} />
 						<ProfileItem label="Role" value={profile.role || "-"} />
 						<ProfileItem label="Verified Driver" value={profile.verifiedDriver ? "Yes" : "No"} />
 						<ProfileItem label="Verification Status" value={profile.verificationStatus || "-"} />
 						<ProfileItem label="Vehicle Number" value={profile.vehicleNumber || "-"} />
+						<ProfileItem label="Vehicle Model" value={profile.vehicleModel || "-"} />
 						<ProfileItem label="Driving License" value={profile.drivingLicense || "-"} />
 						{driverStatus && (
 							<ProfileItem

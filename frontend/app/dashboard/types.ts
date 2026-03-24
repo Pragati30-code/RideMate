@@ -4,6 +4,7 @@ export type DriverStatus = {
   isVerifiedDriver: boolean;
   verificationStatus: string;
   vehicleNumber: string;
+  vehicleModel: string;
   drivingLicense: string;
   detailsSubmitted: boolean;
 };
@@ -33,6 +34,10 @@ export type BookingUser = {
   id: number;
   name: string;
   email: string;
+  phoneNumber?: string;
+  gender?: string;
+  vehicleNumber?: string;
+  vehicleModel?: string;
 };
 
 export type DriverRideBooking = {
@@ -58,6 +63,7 @@ export const defaultDriverStatus: DriverStatus = {
   isVerifiedDriver: false,
   verificationStatus: "",
   vehicleNumber: "",
+  vehicleModel: "",
   drivingLicense: "",
   detailsSubmitted: false,
 };

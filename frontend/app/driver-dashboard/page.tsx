@@ -26,6 +26,8 @@ export default function DriverDashboardPage() {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [bookings, setBookings] = useState<DriverRideBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [rideActionLoading, setRideActionLoading] = useState<"start" | "end" | null>(null);
+  const [passengerActionLoadingId, setPassengerActionLoadingId] = useState<number | null>(null);
 
   const dropMarkers = useMemo(
     () =>
@@ -88,6 +90,21 @@ export default function DriverDashboardPage() {
     }
   };
 
+  const loadRideData = async (rideId: number) => {
+    const rides = await fetchMyRides();
+    const matchedRide = rides.find((ride) => ride.id === rideId) ?? null;
+
+    if (!matchedRide) {
+      setError("Selected ride not found.");
+      setSelectedRide(null);
+      setBookings([]);
+      return;
+    }
+
+    setSelectedRide(matchedRide);
+    await fetchRideBookings(rideId);
+  };
+
   useEffect(() => {
     const token = getAuthToken();
     if (!token) {
@@ -105,17 +122,7 @@ export default function DriverDashboardPage() {
           return;
         }
 
-        const rides = await fetchMyRides();
-        const matchedRide = rides.find((ride) => ride.id === rideIdFromQuery) ?? null;
-
-        if (!matchedRide) {
-          setError("Selected ride not found.");
-          setSelectedRide(null);
-          return;
-        }
-
-        setSelectedRide(matchedRide);
-        await fetchRideBookings(rideIdFromQuery);
+        await loadRideData(rideIdFromQuery);
       } catch {
         clearAuthSession();
         router.replace("/login");
@@ -126,6 +133,122 @@ export default function DriverDashboardPage() {
 
     void init();
   }, [router, searchParams]);
+
+  const handleStartRide = async () => {
+    if (!selectedRide) {
+      return;
+    }
+
+    setRideActionLoading("start");
+    setError("");
+
+    try {
+      const res = await fetch(apiUrl(`/rides/${selectedRide.id}/start`), {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (!res.ok) {
+        setError("Unable to start ride.");
+        return;
+      }
+
+      await loadRideData(selectedRide.id);
+    } catch {
+      setError("Unable to start ride.");
+    } finally {
+      setRideActionLoading(null);
+    }
+  };
+
+  const handleEndRide = async () => {
+    if (!selectedRide) {
+      return;
+    }
+
+    setRideActionLoading("end");
+    setError("");
+
+    try {
+      const res = await fetch(apiUrl(`/rides/${selectedRide.id}/end`), {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (!res.ok) {
+        setError("Unable to end ride.");
+        return;
+      }
+
+      await loadRideData(selectedRide.id);
+    } catch {
+      setError("Unable to end ride.");
+    } finally {
+      setRideActionLoading(null);
+    }
+  };
+
+  const handlePickupPassenger = async (bookingId: number) => {
+    if (!selectedRide) {
+      return;
+    }
+
+    setPassengerActionLoadingId(bookingId);
+    setError("");
+
+    try {
+      const res = await fetch(apiUrl(`/bookings/${bookingId}/pickup`), {
+        method: "PUT",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (!res.ok) {
+        setError("Unable to mark passenger as picked up.");
+        return;
+      }
+
+      await loadRideData(selectedRide.id);
+    } catch {
+      setError("Unable to mark passenger as picked up.");
+    } finally {
+      setPassengerActionLoadingId(null);
+    }
+  };
+
+  const handleDropPassenger = async (bookingId: number) => {
+    if (!selectedRide) {
+      return;
+    }
+
+    setPassengerActionLoadingId(bookingId);
+    setError("");
+
+    try {
+      const res = await fetch(apiUrl(`/bookings/${bookingId}/drop`), {
+        method: "PUT",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (!res.ok) {
+        setError("Unable to end passenger ride.");
+        return;
+      }
+
+      await loadRideData(selectedRide.id);
+    } catch {
+      setError("Unable to end passenger ride.");
+    } finally {
+      setPassengerActionLoadingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!mapRef.current || !selectedRide) {
@@ -210,11 +333,39 @@ export default function DriverDashboardPage() {
                 <p className="text-xs uppercase tracking-wide text-white/50">Ride Status</p>
                 <p className="mt-2 font-semibold">{selectedRide.status ?? "-"}</p>
                 <p className="text-sm text-white/60">Seats Left: {selectedRide.availableSeats ?? "-"}</p>
+                <div className="mt-3 flex gap-2">
+                  {(selectedRide.status === "ACTIVE" || selectedRide.status === "FULL") && (
+                    <button
+                      type="button"
+                      onClick={handleStartRide}
+                      disabled={rideActionLoading !== null}
+                      className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs disabled:opacity-60"
+                    >
+                      {rideActionLoading === "start" ? "Starting..." : "Start Full Ride"}
+                    </button>
+                  )}
+
+                  {selectedRide.status === "IN_PROGRESS" && (
+                    <button
+                      type="button"
+                      onClick={handleEndRide}
+                      disabled={rideActionLoading !== null}
+                      className="px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 text-xs disabled:opacity-60"
+                    >
+                      {rideActionLoading === "end" ? "Ending..." : "End Full Ride"}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4">
                 <p className="text-xs uppercase tracking-wide text-white/50">Driver</p>
                 <p className="mt-2 font-semibold">{selectedRide.driver?.name || "-"}</p>
                 <p className="text-sm text-white/60">{selectedRide.driver?.email || "-"}</p>
+                <p className="text-sm text-white/60">Phone: {selectedRide.driver?.phoneNumber || "-"}</p>
+                <p className="text-sm text-white/60">Gender: {selectedRide.driver?.gender || "-"}</p>
+                <p className="text-sm text-white/60">
+                  Vehicle: {selectedRide.driver?.vehicleNumber || "-"} ({selectedRide.driver?.vehicleModel || "-"})
+                </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-4">
                 <p className="text-xs uppercase tracking-wide text-white/50">Ride ID</p>
@@ -303,6 +454,7 @@ export default function DriverDashboardPage() {
                         <th className="text-left px-4 py-3">Seats</th>
                         <th className="text-left px-4 py-3">Fare (Rs)</th>
                         <th className="text-left px-4 py-3">Status</th>
+                        <th className="text-left px-4 py-3">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -319,6 +471,31 @@ export default function DriverDashboardPage() {
                             {typeof booking.estimatedFare === "number" ? booking.estimatedFare.toFixed(2) : "-"}
                           </td>
                           <td className="px-4 py-3">{booking.status || "-"}</td>
+                          <td className="px-4 py-3">
+                            {selectedRide.status !== "IN_PROGRESS" ? (
+                              <span className="text-xs text-white/40">Start full ride first</span>
+                            ) : booking.status === "CONFIRMED" ? (
+                              <button
+                                type="button"
+                                onClick={() => handlePickupPassenger(booking.id)}
+                                disabled={passengerActionLoadingId === booking.id}
+                                className="px-3 py-1.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30 text-xs disabled:opacity-60"
+                              >
+                                {passengerActionLoadingId === booking.id ? "Updating..." : "Picked Up"}
+                              </button>
+                            ) : booking.status === "PICKED_UP" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDropPassenger(booking.id)}
+                                disabled={passengerActionLoadingId === booking.id}
+                                className="px-3 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 text-xs disabled:opacity-60"
+                              >
+                                {passengerActionLoadingId === booking.id ? "Ending..." : "End"}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-white/40">No action</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

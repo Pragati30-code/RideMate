@@ -24,8 +24,12 @@ public class User {
 
     private String gender;
 
+    private String phoneNumber;
+
     // Driver verification fields
     private String vehicleNumber;
+
+    private String vehicleModel;
 
     private String drivingLicense;
 
@@ -90,12 +94,28 @@ public class User {
         this.gender = gender; 
     }
 
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
     public String getVehicleNumber() {
         return vehicleNumber;
     }
 
     public void setVehicleNumber(String vehicleNumber) {
         this.vehicleNumber = vehicleNumber;
+    }
+
+    public String getVehicleModel() {
+        return vehicleModel;
+    }
+
+    public void setVehicleModel(String vehicleModel) {
+        this.vehicleModel = vehicleModel;
     }
 
     public String getDrivingLicense() {
