@@ -27,6 +27,25 @@ export default function MyRideDashboardPage() {
   const [participants, setParticipants] = useState<DriverRideBooking[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [paying, setPaying] = useState(false);
+
+  const loadRazorpayScript = async (): Promise<boolean> => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    if ((window as Window & { Razorpay?: unknown }).Razorpay) {
+      return true;
+    }
+
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   const dropMarkers = useMemo(
     () =>
@@ -197,6 +216,102 @@ export default function MyRideDashboardPage() {
     }
   };
 
+  const handlePayWithRazorpay = async () => {
+    if (!currentBooking) {
+      return;
+    }
+
+    setPaying(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setError("Unable to load Razorpay checkout.");
+        return;
+      }
+
+      const orderRes = await fetch(apiUrl(`/bookings/${currentBooking.id}/payments/razorpay/order`), {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (!orderRes.ok) {
+        setError("Unable to start payment. Please try again.");
+        return;
+      }
+
+      const orderData = (await orderRes.json()) as {
+        keyId: string;
+        orderId: string;
+        amount: number;
+        currency: string;
+        bookingId: string;
+      };
+
+      const Razorpay = (window as Window & {
+        Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+      }).Razorpay;
+
+      const options: Record<string, unknown> = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "RideMate",
+        description: `Ride payment for booking #${currentBooking.id}`,
+        order_id: orderData.orderId,
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
+          const verifyRes = await fetch(apiUrl(`/bookings/${currentBooking.id}/payments/razorpay/verify`), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }),
+          });
+
+          if (!verifyRes.ok) {
+            setError("Payment verification failed. Please contact support.");
+            return;
+          }
+
+          setMessage("Payment successful.");
+          await refresh();
+        },
+        prefill: {
+          name: currentBooking.user?.name || "",
+          email: currentBooking.user?.email || "",
+          contact: currentBooking.user?.phoneNumber || "",
+        },
+        theme: {
+          color: "#10b981",
+        },
+        modal: {
+          ondismiss: () => {
+            setMessage("Payment window closed.");
+          },
+        },
+      };
+
+      new Razorpay(options).open();
+    } catch {
+      setError("Unable to process payment right now.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading my ride dashboard...</div>
@@ -270,15 +385,33 @@ export default function MyRideDashboardPage() {
                 <p className="text-white/80">
                   Seats + Fare: {currentBooking.seatsBooked} seat(s) | Rs {typeof currentBooking.estimatedFare === "number" ? currentBooking.estimatedFare.toFixed(2) : "-"}
                 </p>
+                <p className="text-sm text-white/60">Payment Status: {currentBooking.paymentStatus || "UNPAID"}</p>
+                {currentBooking.paymentId && <p className="text-sm text-white/60">Payment ID: {currentBooking.paymentId}</p>}
                 <p className="text-sm text-white/60">Ride status: {currentBooking.ride.status ?? "-"}</p>
               </div>
 
-              {currentBooking.status === "CONFIRMED" && (
-                <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-6 flex flex-col justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-rose-200/80">Need to change plans?</p>
-                    <p className="mt-2 text-sm text-white/70">You can cancel this ride before pickup or while confirmed.</p>
-                  </div>
+              <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-6 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-rose-200/80">Actions</p>
+                  <p className="mt-2 text-sm text-white/70">Manage your ride and complete payment after drop-off.</p>
+                </div>
+
+                {currentBooking.status === "DROPPED" && currentBooking.paymentStatus !== "PAID" && (
+                  <button
+                    type="button"
+                    onClick={handlePayWithRazorpay}
+                    disabled={paying}
+                    className="mt-4 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 disabled:opacity-60"
+                  >
+                    {paying ? "Opening Razorpay..." : "Pay with Razorpay"}
+                  </button>
+                )}
+
+                {currentBooking.status !== "DROPPED" && (
+                  <p className="mt-4 text-sm text-white/60">Payment unlocks after driver marks your ride as ended.</p>
+                )}
+
+                {currentBooking.status === "CONFIRMED" && (
                   <button
                     type="button"
                     onClick={handleCancelBooking}
@@ -287,8 +420,9 @@ export default function MyRideDashboardPage() {
                   >
                     {cancelling ? "Cancelling..." : "Cancel Ride"}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
+
             </section>
 
             <section className="rounded-2xl border border-white/10 bg-zinc-900/65 p-6 space-y-4">

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,10 +40,7 @@ public class RideService {
             throw new RuntimeException(
                     "You need to be a verified driver to create rides. Please submit your vehicle details for verification.");
         }
-        boolean hasActiveRide = rideRepository.existsByDriverAndStatusIn(driver, List.of("ACTIVE", "FULL", "IN_PROGRESS"));
-        if (hasActiveRide) {
-            throw new RuntimeException("You already have an active or in-progress ride. Please complete or cancel it before creating a new one.");
-        }
+
         validateCoordinates(request);
 
         Ride ride = new Ride();
@@ -163,7 +161,7 @@ public class RideService {
     private Ride getRideAndVerifyDriver(Long rideId, String driverEmail) {
         User driver = userRepository.findByEmail(driverEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        Ride ride = rideRepository.findById(rideId)
+        Ride ride = rideRepository.findById(Objects.requireNonNull(rideId, "rideId is required"))
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
         if (!ride.getDriver().getId().equals(driver.getId())) {
             throw new RuntimeException("You can only manage your own rides");

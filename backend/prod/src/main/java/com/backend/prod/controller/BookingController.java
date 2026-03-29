@@ -4,6 +4,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.backend.prod.dto.BookingRequest;
+import com.backend.prod.dto.RazorpayOrderResponse;
+import com.backend.prod.dto.RazorpayVerifyRequest;
 import com.backend.prod.entity.Booking;
 import com.backend.prod.service.BookingService;
 import org.springframework.http.ResponseEntity;
@@ -69,5 +71,17 @@ public class BookingController {
     @PutMapping("/{bookingId}/drop")
     public Booking markDropped(@PathVariable Long bookingId, Authentication auth) {
         return bookingService.markDropped(bookingId, auth.getName());
+    }
+
+    @PostMapping("/{bookingId}/payments/razorpay/order")
+    public RazorpayOrderResponse createRazorpayOrder(@PathVariable Long bookingId, Authentication auth) {
+        return bookingService.createRazorpayOrder(bookingId, auth.getName());
+    }
+
+    @PostMapping("/{bookingId}/payments/razorpay/verify")
+    public Booking verifyRazorpayPayment(@PathVariable Long bookingId,
+            @RequestBody RazorpayVerifyRequest request,
+            Authentication auth) {
+        return bookingService.verifyRazorpayPayment(bookingId, auth.getName(), request);
     }
 }

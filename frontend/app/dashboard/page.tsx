@@ -400,7 +400,14 @@ export default function DashboardPage() {
       });
 
       if (!res.ok) {
-        setError("Failed to create ride. Please check your details.");
+        let backendMessage = "Failed to create ride. Please check your details.";
+        try {
+          const errorBody = (await res.json()) as { error?: string; message?: string };
+          backendMessage = errorBody.error || errorBody.message || backendMessage;
+        } catch {
+          // Keep fallback message when response body is not JSON.
+        }
+        setError(backendMessage);
         return;
       }
 

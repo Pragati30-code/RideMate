@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 
 import com.backend.prod.dto.BookingRequest;
+import com.backend.prod.dto.RazorpayOrderResponse;
+import com.backend.prod.dto.RazorpayVerifyRequest;
 import com.backend.prod.entity.Booking;
 import com.backend.prod.entity.Ride;
 import com.backend.prod.entity.User;
@@ -13,6 +15,7 @@ import com.backend.prod.repository.UserRepository;
 
 import java.util.List;
 import java.util.Objects;
+import java.time.LocalDateTime;
 
 @Service
 public class BookingService {
@@ -21,15 +24,18 @@ public class BookingService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final RideService rideService;
+    private final RazorpayService razorpayService;
 
     public BookingService(BookingRepository bookingRepository,
             RideRepository rideRepository,
             UserRepository userRepository,
-            RideService rideService) {
+            RideService rideService,
+            RazorpayService razorpayService) {
         this.bookingRepository = bookingRepository;
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
         this.rideService = rideService;
+        this.razorpayService = razorpayService;
     }
 
     @Transactional
@@ -97,6 +103,7 @@ public class BookingService {
 
         booking.setSegmentDistanceKm(Math.round(segmentKm * 100.0) / 100.0);
         booking.setEstimatedFare(estimatedFare);
+        booking.setPaymentStatus("UNPAID");
 
         return bookingRepository.save(booking);
     }
@@ -181,7 +188,77 @@ public class BookingService {
         }
 
         rideRepository.save(ride);
+
+        if ("PAID".equals(booking.getPaymentStatus())) {
+            booking.setPaymentStatus("REFUND_INITIATED");
+        }
+
         booking.setStatus("CANCELLED");
+        return bookingRepository.save(booking);
+    }
+
+    public RazorpayOrderResponse createRazorpayOrder(Long bookingId, String email) {
+        Booking booking = getBookingAndVerifyPassenger(bookingId, email);
+
+        if (!"DROPPED".equals(booking.getStatus())) {
+            throw new RuntimeException("Payment can only be started after passenger ride is ended");
+        }
+
+        if ("PAID".equals(booking.getPaymentStatus())) {
+            throw new RuntimeException("Booking is already paid");
+        }
+
+        if (booking.getEstimatedFare() == null || booking.getEstimatedFare() <= 0) {
+            throw new RuntimeException("Invalid fare amount for payment");
+        }
+
+        long amountInPaise = Math.round(booking.getEstimatedFare() * 100.0);
+        RazorpayOrderResponse order = razorpayService.createOrder(amountInPaise, String.valueOf(booking.getId()));
+
+        booking.setPaymentProvider("RAZORPAY");
+        booking.setPaymentOrderId(order.getOrderId());
+        booking.setPaymentStatus("UNPAID");
+        bookingRepository.save(booking);
+
+        return order;
+    }
+
+    @Transactional
+    public Booking verifyRazorpayPayment(Long bookingId, String email, RazorpayVerifyRequest request) {
+        Booking booking = getBookingAndVerifyPassenger(bookingId, email);
+
+        if (!"DROPPED".equals(booking.getStatus())) {
+            throw new RuntimeException("Payment can only be completed after passenger ride is ended");
+        }
+
+        if ("PAID".equals(booking.getPaymentStatus())) {
+            return booking;
+        }
+
+        if (request == null || request.getRazorpayOrderId() == null || request.getRazorpayOrderId().isBlank()
+                || request.getRazorpayPaymentId() == null || request.getRazorpayPaymentId().isBlank()
+                || request.getRazorpaySignature() == null || request.getRazorpaySignature().isBlank()) {
+            throw new RuntimeException("Missing Razorpay payment verification fields");
+        }
+
+        if (booking.getPaymentOrderId() == null || !booking.getPaymentOrderId().equals(request.getRazorpayOrderId())) {
+            throw new RuntimeException("Invalid Razorpay order for this booking");
+        }
+
+        boolean valid = razorpayService.verifySignature(
+                request.getRazorpayOrderId(),
+                request.getRazorpayPaymentId(),
+                request.getRazorpaySignature());
+
+        if (!valid) {
+            throw new RuntimeException("Invalid Razorpay signature");
+        }
+
+        booking.setPaymentProvider("RAZORPAY");
+        booking.setPaymentId(request.getRazorpayPaymentId());
+        booking.setPaymentSignature(request.getRazorpaySignature());
+        booking.setPaymentStatus("PAID");
+        booking.setPaidAt(LocalDateTime.now());
         return bookingRepository.save(booking);
     }
 
@@ -223,6 +300,20 @@ public class BookingService {
 
         if (!"IN_PROGRESS".equals(booking.getRide().getStatus())) {
             throw new RuntimeException("Ride must be in progress to update passenger status");
+        }
+
+        return booking;
+    }
+
+    private Booking getBookingAndVerifyPassenger(Long bookingId, String passengerEmail) {
+        User passenger = userRepository.findByEmail(passengerEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(bookingId, "bookingId is required"))
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!booking.getUser().getId().equals(passenger.getId())) {
+            throw new RuntimeException("You can only pay for your own booking");
         }
 
         return booking;

@@ -44,6 +44,12 @@ export type DriverRideBooking = {
   id: number;
   seatsBooked: number;
   status: string;
+  paymentStatus?: string;
+  paymentProvider?: string;
+  paymentOrderId?: string;
+  paymentId?: string;
+  paymentSignature?: string;
+  paidAt?: string;
   pickupName?: string;
   pickupLatitude?: number;
   pickupLongitude?: number;

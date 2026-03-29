@@ -2,6 +2,8 @@ package com.backend.prod.entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 public class Booking {
 
@@ -36,6 +38,14 @@ public class Booking {
     // Fare = segmentDistanceKm × FARE_PER_KM × seatsBooked
     private Double segmentDistanceKm;
     private Double estimatedFare;
+
+    // Payment details
+    private String paymentStatus; // UNPAID / PAID / REFUND_INITIATED
+    private String paymentProvider; // RAZORPAY
+    private String paymentOrderId;
+    private String paymentId;
+    private String paymentSignature;
+    private LocalDateTime paidAt;
 
     // getters & setters
     public Long getId() {
@@ -140,6 +150,54 @@ public class Booking {
 
     public void setEstimatedFare(Double estimatedFare) {
         this.estimatedFare = estimatedFare;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getPaymentProvider() {
+        return paymentProvider;
+    }
+
+    public void setPaymentProvider(String paymentProvider) {
+        this.paymentProvider = paymentProvider;
+    }
+
+    public String getPaymentOrderId() {
+        return paymentOrderId;
+    }
+
+    public void setPaymentOrderId(String paymentOrderId) {
+        this.paymentOrderId = paymentOrderId;
+    }
+
+    public String getPaymentId() {
+        return paymentId;
+    }
+
+    public void setPaymentId(String paymentId) {
+        this.paymentId = paymentId;
+    }
+
+    public String getPaymentSignature() {
+        return paymentSignature;
+    }
+
+    public void setPaymentSignature(String paymentSignature) {
+        this.paymentSignature = paymentSignature;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
     }
 
 }
