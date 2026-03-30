@@ -1,4 +1,4 @@
-# 🚗 RideMate - AI powered campus carpooling
+# 🚗 RideMate - Carpooling for Students
 
 Full-stack ride-sharing application enabling students to share rides, split costs, and reduce carbon footprint. Built with microservices-ready architecture and production-grade patterns.
 
@@ -28,13 +28,13 @@ Full-stack ride-sharing application enabling students to share rides, split cost
 
 | Component | Technology |
 |-----------|------------|
-| **Backend** | Java 17, Spring Boot 3.2, Hibernate/JPA |
+| **Backend** | Java 21, Spring Boot 3.5, Hibernate/JPA |
 | **Database** | PostgreSQL (Neon), HikariCP connection pooling |
 | **Security** | JWT (RS256), Spring Security, BCrypt |
 | **Real-time** | WebSocket (STOMP protocol), SockJS fallback |
 | **Payments** | Razorpay SDK, HMAC-SHA256 verification |
-| **Frontend** | React 18, TypeScript, Next.js 14 App Router |
-| **Mapping** | Google Maps API (Directions, Geocoding, Distance Matrix) |
+| **Frontend** | TypeScript, Next.js 14 App Router |
+| **Mapping** | Mapcn, OpenState map API |
 
 ## 🗄️ Database Design
 
@@ -135,19 +135,9 @@ GET    /api/users/{id}/reviews       User reviews
 
 ## 🚀 Deployment Architecture
 
-**Backend**: Railway (Docker container, auto-scaling)  
+**Backend**: Heroku   
 **Frontend**: Vercel (Edge network, SSR)  
 **Database**: Neon PostgreSQL (auto-scaling, daily backups)
-
-**CI/CD Pipeline**:  
-GitHub Actions → Maven Build → JUnit Tests → Docker Build → Deploy
-
-## 📊 Monitoring & Observability
-
-- **Health Checks**: Spring Boot Actuator (`/actuator/health`)
-- **Metrics**: Prometheus-compatible endpoints
-- **Logging**: SLF4J + Logback (JSON structured logs)
-- **Database**: Neon analytics dashboard for query performance
 
 ## 🔧 Local Development
 
@@ -168,7 +158,6 @@ DATABASE_URL=<neon-connection-string>
 JWT_SECRET=<256-bit-secret>
 RAZORPAY_KEY_ID=<key>
 RAZORPAY_KEY_SECRET=<secret>
-GOOGLE_MAPS_API_KEY=<key>
 ```
 
 ## 📈 Future Enhancements
@@ -178,13 +167,3 @@ GOOGLE_MAPS_API_KEY=<key>
 - [ ] Apache Kafka for event streaming
 - [ ] Rate limiting with Redis + Spring AOP
 - [ ] Grafana dashboards for metrics visualization
-
----
-
-**Production-ready architecture with SOLID principles, clean code, and enterprise patterns.**
-
-[![Java](https://img.shields.io/badge/Java-17-orange)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-brightgreen)](https://spring.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)](https://www.postgresql.org/)
-[![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
