@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import {
   Map, MapControls, MapMarker,
   MarkerContent, MarkerLabel, type MapRef,
@@ -143,7 +144,8 @@ function statusBadgeClass(status?: string) {
   }
 }
 
-export default function DriverDashboardPage() {
+// ✅ SEPARATE COMPONENT THAT USES useSearchParams
+function DriverDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mapRef = useRef<MapRef | null>(null);
@@ -493,5 +495,21 @@ export default function DriverDashboardPage() {
         )}
       </main>
     </div>
+  );
+}
+
+// MAIN PAGE COMPONENT - WRAPS CONTENT IN SUSPENSE
+export default function DriverDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#fdf6ec 0%,#fef3e8 50%,#fdf0f8 100%)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:32, marginBottom:12 }}>🚗</div>
+          <p style={{ fontFamily:"var(--font-dm), sans-serif", color:"#a09890", fontSize:15 }}>Loading…</p>
+        </div>
+      </div>
+    }>
+      <DriverDashboardContent />
+    </Suspense>
   );
 }
