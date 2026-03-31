@@ -10,6 +10,8 @@ import com.backend.prod.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 @Service
 public class AuthService {
     
@@ -35,8 +37,14 @@ public class AuthService {
         }
 
         user.setRole(UserRole.USER);
+        user.setRideOtp(generateRideOtp());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
+    }
+
+    private String generateRideOtp() {
+        int otp = ThreadLocalRandom.current().nextInt(100000, 1000000);
+        return String.valueOf(otp);
     }
 
     public LoginResponse login(String email, String password) {
@@ -53,12 +61,24 @@ public class AuthService {
             userRepository.save(user);
         }
 
+        if (user.getRideOtp() == null || user.getRideOtp().isBlank()) {
+            user.setRideOtp(generateRideOtp());
+            userRepository.save(user);
+        }
+
         String token = jwtUtil.generateToken(email, role.name());
         return new LoginResponse(token, user.getId(), user.getName(), user.getEmail(), role.name());
     }
 
     public User getCurrentUser(String email) {
-        return userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getRideOtp() == null || user.getRideOtp().isBlank()) {
+            user.setRideOtp(generateRideOtp());
+            return userRepository.save(user);
+        }
+
+        return user;
     }
 }

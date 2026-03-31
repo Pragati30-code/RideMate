@@ -4,6 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.backend.prod.dto.BookingRequest;
+import com.backend.prod.dto.PickupOtpRequest;
 import com.backend.prod.dto.RazorpayOrderResponse;
 import com.backend.prod.dto.RazorpayVerifyRequest;
 import com.backend.prod.entity.Booking;
@@ -63,8 +64,10 @@ public class BookingController {
 
     // Driver marks passenger as picked up
     @PutMapping("/{bookingId}/pickup")
-    public Booking markPickedUp(@PathVariable Long bookingId, Authentication auth) {
-        return bookingService.markPickedUp(bookingId, auth.getName());
+    public Booking markPickedUp(@PathVariable Long bookingId,
+            @RequestBody PickupOtpRequest request,
+            Authentication auth) {
+        return bookingService.markPickedUp(bookingId, auth.getName(), request != null ? request.getOtp() : null);
     }
 
     // Driver marks passenger as dropped off

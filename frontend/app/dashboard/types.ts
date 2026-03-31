@@ -34,6 +34,7 @@ export type BookingUser = {
   id: number;
   name: string;
   email: string;
+  rideOtp?: string;
   phoneNumber?: string;
   gender?: string;
   vehicleNumber?: string;

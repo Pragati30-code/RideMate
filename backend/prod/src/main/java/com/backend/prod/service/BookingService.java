@@ -263,11 +263,20 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking markPickedUp(Long bookingId, String driverEmail) {
+    public Booking markPickedUp(Long bookingId, String driverEmail, String otp) {
         Booking booking = getBookingAndVerifyDriver(bookingId, driverEmail);
 
         if (!"CONFIRMED".equals(booking.getStatus())) {
             throw new RuntimeException("Only confirmed bookings can be marked as picked up");
+        }
+
+        if (otp == null || otp.isBlank()) {
+            throw new RuntimeException("Pickup OTP is required");
+        }
+
+        String expectedOtp = booking.getUser() != null ? booking.getUser().getRideOtp() : null;
+        if (expectedOtp == null || !expectedOtp.equals(otp.trim())) {
+            throw new RuntimeException("Invalid pickup OTP");
         }
 
         booking.setStatus("PICKED_UP");

@@ -6,7 +6,13 @@ type PassengerTableProps = {
   bookings: DriverRideBooking[];
   selectedRideStatus?: string;
   passengerActionLoadingId: number | null;
-  onPickupPassenger: (bookingId: number) => void;
+  otpModalBooking: DriverRideBooking | null;
+  pickupOtpValue: string;
+  pickupOtpError: string;
+  onPickupOtpValueChange: (value: string) => void;
+  onOpenPickupOtpModal: (booking: DriverRideBooking) => void;
+  onClosePickupOtpModal: () => void;
+  onConfirmPickupOtp: (bookingId: number) => void;
   onDropPassenger: (bookingId: number) => void;
 };
 
@@ -15,7 +21,13 @@ export default function PassengerTable({
   bookings,
   selectedRideStatus,
   passengerActionLoadingId,
-  onPickupPassenger,
+  otpModalBooking,
+  pickupOtpValue,
+  pickupOtpError,
+  onPickupOtpValueChange,
+  onOpenPickupOtpModal,
+  onClosePickupOtpModal,
+  onConfirmPickupOtp,
   onDropPassenger,
 }: PassengerTableProps) {
   return (
@@ -63,10 +75,10 @@ export default function PassengerTable({
                     ) : b.status === "CONFIRMED" ? (
                       <button
                         className="dd-btn dd-btn-blue"
-                        onClick={() => onPickupPassenger(b.id)}
+                        onClick={() => onOpenPickupOtpModal(b)}
                         disabled={passengerActionLoadingId === b.id}
                       >
-                        {passengerActionLoadingId === b.id ? "Updating…" : "Picked Up"}
+                        Verify Pickup OTP
                       </button>
                     ) : b.status === "PICKED_UP" ? (
                       <button
@@ -84,6 +96,72 @@ export default function PassengerTable({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {otpModalBooking && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 120,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              background: "rgba(255,255,255,0.95)",
+              border: "1.5px solid rgba(45,45,45,0.12)",
+              borderRadius: 18,
+              padding: 20,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
+            }}
+          >
+            <h3 className="font-display" style={{ fontSize: 20, color: "#1e1e1e", marginBottom: 8 }}>
+              Confirm Passenger Pickup
+            </h3>
+            <p className="font-body" style={{ fontSize: 13, color: "#7a7370", marginBottom: 12 }}>
+              Enter OTP for {otpModalBooking.user?.name || "this passenger"}.
+            </p>
+            <input
+              value={pickupOtpValue}
+              onChange={(e) => onPickupOtpValueChange(e.target.value)}
+              placeholder="Enter 6-digit OTP"
+              maxLength={6}
+              style={{
+                width: "100%",
+                border: "1.5px solid rgba(45,45,45,0.18)",
+                borderRadius: 12,
+                padding: "12px 14px",
+                fontFamily: "var(--font-dm), sans-serif",
+                fontSize: 15,
+                marginBottom: 8,
+              }}
+            />
+            {pickupOtpError && (
+              <p className="font-body" style={{ fontSize: 12, color: "#c0392b", marginBottom: 10 }}>
+                {pickupOtpError}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button className="dd-btn" style={{ background: "rgba(45,45,45,0.08)", color: "#3a3530" }} onClick={onClosePickupOtpModal}>
+                Cancel
+              </button>
+              <button
+                className="dd-btn dd-btn-blue"
+                onClick={() => onConfirmPickupOtp(otpModalBooking.id)}
+                disabled={passengerActionLoadingId === otpModalBooking.id}
+              >
+                {passengerActionLoadingId === otpModalBooking.id ? "Verifying…" : "Confirm Pickup"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

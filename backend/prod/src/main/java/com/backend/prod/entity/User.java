@@ -26,6 +26,9 @@ public class User {
 
     private String phoneNumber;
 
+    @Column(name = "ride_otp", length = 6)
+    private String rideOtp;
+
     // Driver verification fields
     private String vehicleNumber;
 
@@ -100,6 +103,14 @@ public class User {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getRideOtp() {
+        return rideOtp;
+    }
+
+    public void setRideOtp(String rideOtp) {
+        this.rideOtp = rideOtp;
     }
 
     public String getVehicleNumber() {

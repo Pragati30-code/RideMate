@@ -46,6 +46,9 @@ function DriverDashboardContent() {
   const [rideActionLoading, setRideActionLoading] = useState<"start" | "end" | null>(null);
   const [passengerActionLoadingId, setPassengerActionLoadingId] = useState<number | null>(null);
   const [locatingForMaps, setLocatingForMaps] = useState(false);
+  const [otpModalBooking, setOtpModalBooking] = useState<DriverRideBooking | null>(null);
+  const [pickupOtpValue, setPickupOtpValue] = useState("");
+  const [pickupOtpError, setPickupOtpError] = useState("");
 
   const dropMarkers = useMemo(
     () => bookings.filter(b => typeof b.dropLatitude === "number" && typeof b.dropLongitude === "number"),
@@ -182,15 +185,65 @@ function DriverDashboardContent() {
     finally { setRideActionLoading(null); }
   };
 
-  const handlePickupPassenger = async (bookingId: number) => {
-    if (!selectedRide) return;
-    setPassengerActionLoadingId(bookingId); setError("");
+  const handlePickupPassenger = async (bookingId: number, otp: string): Promise<boolean> => {
+    if (!selectedRide) return false;
+    setPassengerActionLoadingId(bookingId); setError(""); setPickupOtpError("");
     try {
-      const res = await fetch(apiUrl(`/bookings/${bookingId}/pickup`), { method: "PUT", headers: getAuthHeaders() });
-      if (!res.ok) { setError("Unable to mark passenger as picked up."); return; }
+      const res = await fetch(apiUrl(`/bookings/${bookingId}/pickup`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ otp }),
+      });
+      if (!res.ok) {
+        let backendError = "";
+        try {
+          const b = (await res.json()) as { error?: string; message?: string };
+          backendError = b.error || b.message || "";
+        } catch {}
+        if (backendError.toLowerCase().includes("invalid pickup otp")) {
+          setPickupOtpError("OTP is wrong");
+        } else {
+          setError(backendError || "Unable to mark passenger as picked up.");
+        }
+        return false;
+      }
       await loadRideData(selectedRide.id);
+      return true;
     } catch { setError("Unable to mark passenger as picked up."); }
     finally { setPassengerActionLoadingId(null); }
+    return false;
+  };
+
+  const openPickupOtpModal = (booking: DriverRideBooking) => {
+    setOtpModalBooking(booking);
+    setPickupOtpValue("");
+    setPickupOtpError("");
+  };
+
+  const closePickupOtpModal = () => {
+    if (passengerActionLoadingId !== null) return;
+    setOtpModalBooking(null);
+    setPickupOtpValue("");
+    setPickupOtpError("");
+  };
+
+  const confirmPickupWithOtp = async (bookingId: number) => {
+    const otp = pickupOtpValue.trim();
+    if (!otp) {
+      setPickupOtpError("OTP is required.");
+      return;
+    }
+    const success = await handlePickupPassenger(bookingId, otp);
+    if (success) {
+      setOtpModalBooking(null);
+      setPickupOtpValue("");
+      setPickupOtpError("");
+    }
+  };
+
+  const handlePickupOtpValueChange = (value: string) => {
+    setPickupOtpValue(value);
+    if (pickupOtpError) setPickupOtpError("");
   };
 
   const handleDropPassenger = async (bookingId: number) => {
@@ -252,7 +305,13 @@ function DriverDashboardContent() {
               bookings={bookings}
               selectedRideStatus={selectedRide.status}
               passengerActionLoadingId={passengerActionLoadingId}
-              onPickupPassenger={handlePickupPassenger}
+              otpModalBooking={otpModalBooking}
+              pickupOtpValue={pickupOtpValue}
+              pickupOtpError={pickupOtpError}
+              onPickupOtpValueChange={handlePickupOtpValueChange}
+              onOpenPickupOtpModal={openPickupOtpModal}
+              onClosePickupOtpModal={closePickupOtpModal}
+              onConfirmPickupOtp={confirmPickupWithOtp}
               onDropPassenger={handleDropPassenger}
             />
           </>

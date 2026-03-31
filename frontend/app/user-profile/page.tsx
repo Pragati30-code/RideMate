@@ -10,6 +10,7 @@ type UserProfile = {
   id: number;
   name: string;
   email: string;
+  rideOtp?: string;
   phoneNumber?: string;
   studentId?: string;
   gender?: string;
@@ -186,6 +187,7 @@ export default function UserProfilePage() {
   const personalFields = [
     { label: "Full Name",    value: profile.name },
     { label: "Email",        value: profile.email },
+    { label: "Ride OTP",     value: profile.rideOtp || "-" },
     { label: "Phone Number", value: profile.phoneNumber || "-" },
     { label: "Student ID",   value: profile.studentId || "-" },
     { label: "Gender",       value: profile.gender || "-" },

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import com.backend.prod.dto.DriverVerificationRequest;
 import com.backend.prod.entity.DriverVerificationStatus;
 import com.backend.prod.entity.User;
+import com.backend.prod.entity.UserRole;
 import com.backend.prod.repository.UserRepository;
 
 import java.util.List;
@@ -23,7 +24,14 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<User> getAllUsers(Authentication auth) {
+        User requester = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (requester.getRole() != UserRole.ADMIN) {
+            throw new RuntimeException("Only admins can view all users");
+        }
+
         return userRepository.findAll();
     }
 
