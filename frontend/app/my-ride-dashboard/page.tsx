@@ -247,7 +247,8 @@ export default function MyRideDashboardPage() {
       const orderRes = await fetch(apiUrl(`/bookings/${currentBooking.id}/payments/razorpay/order`), { method: "POST", headers: getAuthHeaders() });
       if (!orderRes.ok) { setError("Unable to start payment."); return; }
       const orderData = (await orderRes.json()) as { keyId: string; orderId: string; amount: number; currency: string };
-      const Razorpay = (window as Window & { Razorpay: new (o: Record<string, unknown>) => { open: () => void } }).Razorpay;
+      //const Razorpay = (window as Window & { Razorpay: new (o: Record<string, unknown>) => { open: () => void } }).Razorpay;
+      const Razorpay = (window as any).Razorpay;
       new Razorpay({
         key: orderData.keyId, amount: orderData.amount, currency: orderData.currency,
         name: "RideMate", description: `Booking #${currentBooking.id}`, order_id: orderData.orderId,
