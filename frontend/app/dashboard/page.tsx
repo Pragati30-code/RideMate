@@ -2,23 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  apiUrl,
-  getAuthHeaders,
-  getAuthToken,
-  clearAuthSession,
-} from "@/lib/api";
+import { apiUrl, getAuthHeaders, getAuthToken, clearAuthSession } from "@/lib/api";
 import DashboardHeader from "./components/DashboardHeader";
 import ModeSwitch from "./components/ModeSwitch";
 import BookRideSection from "./components/BookRideSection";
 import MakeRideSection from "./components/MakeRideSection";
-import {
-  DashboardMode,
-  DriverStatus,
-  Ride,
-  SearchRideResult,
-  defaultDriverStatus,
-} from "./types";
+import { DashboardMode, DriverStatus, Ride, SearchRideResult, defaultDriverStatus } from "./types";
+import { dashboardStyles } from "./components/dashboardStyles";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -27,17 +17,13 @@ export default function DashboardPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [driverStatus, setDriverStatus] =
-    useState<DriverStatus>(defaultDriverStatus);
-
+  const [driverStatus, setDriverStatus] = useState<DriverStatus>(defaultDriverStatus);
   const [searchSource, setSearchSource] = useState("");
   const [searchDestination, setSearchDestination] = useState("");
   const [searchSourceLatitude, setSearchSourceLatitude] = useState("");
   const [searchSourceLongitude, setSearchSourceLongitude] = useState("");
-  const [searchDestinationLatitude, setSearchDestinationLatitude] =
-    useState("");
-  const [searchDestinationLongitude, setSearchDestinationLongitude] =
-    useState("");
+  const [searchDestinationLatitude, setSearchDestinationLatitude] = useState("");
+  const [searchDestinationLongitude, setSearchDestinationLongitude] = useState("");
   const [searchedRides, setSearchedRides] = useState<SearchRideResult[]>([]);
   const [activeRides, setActiveRides] = useState<Ride[]>([]);
   const [myRides, setMyRides] = useState<Ride[]>([]);
@@ -59,17 +45,8 @@ export default function DashboardPage() {
   const [creatingRide, setCreatingRide] = useState(false);
 
   const fetchDriverStatus = async () => {
-    const res = await fetch(apiUrl("/users/driver-status"), {
-      method: "GET",
-      headers: {
-        ...getAuthHeaders(),
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Could not load driver status");
-    }
-
+    const res = await fetch(apiUrl("/users/driver-status"), { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error("Could not load driver status");
     const data = (await res.json()) as DriverStatus;
     setDriverStatus(data);
     if (data.vehicleNumber) setVehicleNumber(data.vehicleNumber);
@@ -78,424 +55,187 @@ export default function DashboardPage() {
   };
 
   const fetchActiveRides = async () => {
-    const res = await fetch(apiUrl("/rides"), {
-      method: "GET",
-      headers: {
-        ...getAuthHeaders(),
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Could not load active rides");
-    }
-
+    const res = await fetch(apiUrl("/rides"), { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error("Could not load active rides");
     const data = (await res.json()) as Ride[];
     setActiveRides([...data].sort((a, b) => b.id - a.id));
   };
 
   const fetchMyRides = async () => {
-    const res = await fetch(apiUrl("/rides/my-rides"), {
-      method: "GET",
-      headers: {
-        ...getAuthHeaders(),
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Could not load your rides");
-    }
-
+    const res = await fetch(apiUrl("/rides/my-rides"), { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error("Could not load your rides");
     const data = (await res.json()) as Ride[];
     setMyRides([...data].sort((a, b) => b.id - a.id));
   };
 
   useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
+    if (!getAuthToken()) { router.replace("/login"); return; }
     const init = async () => {
       setLoading(true);
-      try {
-        await Promise.all([
-          fetchDriverStatus(),
-          fetchActiveRides(),
-          fetchMyRides(),
-        ]);
-      } catch (e) {
-        setError("Session expired. Please login again.");
-        clearAuthSession();
-        router.replace("/login");
-      } finally {
-        setLoading(false);
-      }
+      try { await Promise.all([fetchDriverStatus(), fetchActiveRides(), fetchMyRides()]); }
+      catch { setError("Session expired. Please login again."); clearAuthSession(); router.replace("/login"); }
+      finally { setLoading(false); }
     };
-
     void init();
   }, [router]);
 
   const handleSearchRides = async () => {
-    setMessage("");
-    setError("");
-    setSearchedRides([]);
-
-    const parsedSourceLatitude = searchSourceLatitude
-      ? Number(searchSourceLatitude)
-      : NaN;
-    const parsedSourceLongitude = searchSourceLongitude
-      ? Number(searchSourceLongitude)
-      : NaN;
-    const parsedDestinationLatitude = searchDestinationLatitude
-      ? Number(searchDestinationLatitude)
-      : NaN;
-    const parsedDestinationLongitude = searchDestinationLongitude
-      ? Number(searchDestinationLongitude)
-      : NaN;
-
-    if (
-      Number.isNaN(parsedSourceLatitude) ||
-      Number.isNaN(parsedSourceLongitude) ||
-      Number.isNaN(parsedDestinationLatitude) ||
-      Number.isNaN(parsedDestinationLongitude)
-    ) {
-      setError(
-        "Please select source and destination from suggestions to search by location.",
-      );
-      return;
+    setMessage(""); setError(""); setSearchedRides([]);
+    const sLat = Number(searchSourceLatitude), sLon = Number(searchSourceLongitude);
+    const dLat = Number(searchDestinationLatitude), dLon = Number(searchDestinationLongitude);
+    if ([sLat, sLon, dLat, dLon].some(Number.isNaN)) {
+      setError("Please select source and destination from suggestions."); return;
     }
-
     try {
       const res = await fetch(apiUrl("/rides/search"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          source: searchSource,
-          sourceLatitude: parsedSourceLatitude,
-          sourceLongitude: parsedSourceLongitude,
-          destination: searchDestination,
-          destinationLatitude: parsedDestinationLatitude,
-          destinationLongitude: parsedDestinationLongitude,
-        }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ source: searchSource, sourceLatitude: sLat, sourceLongitude: sLon, destination: searchDestination, destinationLatitude: dLat, destinationLongitude: dLon }),
       });
-
-      if (!res.ok) {
-        setError("Failed to search rides.");
-        return;
-      }
-
+      if (!res.ok) { setError("Failed to search rides."); return; }
       const data = (await res.json()) as SearchRideResult[];
       setSearchedRides(data);
-      setMessage(data.length ? "Rides found" : "No rides found for this route");
-    } catch (e) {
-      setError("Unable to reach server. Try again.");
-    }
+      setMessage(data.length ? "Rides found!" : "No rides found for this route.");
+    } catch { setError("Unable to reach server."); }
   };
 
   const handleSubmitVerification = async () => {
-    setMessage("");
-    setError("");
-    setSubmittingVerification(true);
-
+    setMessage(""); setError(""); setSubmittingVerification(true);
     try {
       const res = await fetch(apiUrl("/users/submit-driver-details"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ vehicleNumber, vehicleModel, drivingLicense }),
       });
-
-      if (!res.ok) {
-        setError("Could not submit verification details.");
-        return;
-      }
-
+      if (!res.ok) { setError("Could not submit verification details."); return; }
       await fetchDriverStatus();
-      setMessage(
-        "Verification details submitted. Please wait for admin approval.",
-      );
-    } catch (e) {
-      setError("Unable to submit verification details.");
-    } finally {
-      setSubmittingVerification(false);
-    }
+      setMessage("Verification submitted. Please wait for admin approval.");
+    } catch { setError("Unable to submit verification details."); }
+    finally { setSubmittingVerification(false); }
   };
 
   const handleBookRide = async (rideId: number, seats: number) => {
-    setMessage("");
-    setError("");
-
-    if (!Number.isFinite(seats) || seats <= 0) {
-      setError("Please enter valid seats to book.");
-      return;
-    }
-
-    const parsedPickupLatitude = searchSourceLatitude
-      ? Number(searchSourceLatitude)
-      : NaN;
-    const parsedPickupLongitude = searchSourceLongitude
-      ? Number(searchSourceLongitude)
-      : NaN;
-    const parsedDropLatitude = searchDestinationLatitude
-      ? Number(searchDestinationLatitude)
-      : NaN;
-    const parsedDropLongitude = searchDestinationLongitude
-      ? Number(searchDestinationLongitude)
-      : NaN;
-
-    if (
-      Number.isNaN(parsedPickupLatitude) ||
-      Number.isNaN(parsedPickupLongitude) ||
-      Number.isNaN(parsedDropLatitude) ||
-      Number.isNaN(parsedDropLongitude)
-    ) {
-      setError(
-        "Select source and destination from suggestions before booking.",
-      );
-      return;
-    }
-
+    setMessage(""); setError("");
+    if (!Number.isFinite(seats) || seats <= 0) { setError("Please enter valid seats."); return; }
+    const pLat = Number(searchSourceLatitude), pLon = Number(searchSourceLongitude);
+    const dLat = Number(searchDestinationLatitude), dLon = Number(searchDestinationLongitude);
+    if ([pLat, pLon, dLat, dLon].some(Number.isNaN)) { setError("Select locations from suggestions before booking."); return; }
     setBookingRideId(rideId);
-
     try {
       const res = await fetch(apiUrl("/bookings"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          rideId,
-          seats,
-          pickupName: searchSource,
-          pickupLatitude: parsedPickupLatitude,
-          pickupLongitude: parsedPickupLongitude,
-          dropName: searchDestination,
-          dropLatitude: parsedDropLatitude,
-          dropLongitude: parsedDropLongitude,
-        }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ rideId, seats, pickupName: searchSource, pickupLatitude: pLat, pickupLongitude: pLon, dropName: searchDestination, dropLatitude: dLat, dropLongitude: dLon }),
       });
-
-      if (!res.ok) {
-        setError("Unable to book ride. Please verify seats and ride status.");
-        return;
-      }
-
-      setMessage("Ride booked successfully.");
+      if (!res.ok) { setError("Unable to book ride. Please verify seats and ride status."); return; }
+      setMessage("Ride booked successfully! 🎉");
       await Promise.all([fetchActiveRides(), fetchMyRides()]);
       await handleSearchRides();
-    } catch (e) {
-      setError("Unable to book ride.");
-    } finally {
-      setBookingRideId(null);
-    }
+    } catch { setError("Unable to book ride."); }
+    finally { setBookingRideId(null); }
   };
 
   const handleCreateRide = async () => {
-    setMessage("");
-    setError("");
-    setCreatingRide(true);
-
+    setMessage(""); setError(""); setCreatingRide(true);
     const parsedSeats = Number(availableSeats);
-    const parsedSourceLatitude = sourceLatitude ? Number(sourceLatitude) : null;
-    const parsedSourceLongitude = sourceLongitude
-      ? Number(sourceLongitude)
-      : null;
-    const parsedDestinationLatitude = destinationLatitude
-      ? Number(destinationLatitude)
-      : null;
-    const parsedDestinationLongitude = destinationLongitude
-      ? Number(destinationLongitude)
-      : null;
-
-    if (!parsedSeats || parsedSeats <= 0) {
-      setError("Please enter a valid value for available seats.");
-      setCreatingRide(false);
-      return;
+    if (!parsedSeats || parsedSeats <= 0) { setError("Please enter valid available seats."); setCreatingRide(false); return; }
+    const sLat = sourceLatitude ? Number(sourceLatitude) : null;
+    const sLon = sourceLongitude ? Number(sourceLongitude) : null;
+    const dLat = destinationLatitude ? Number(destinationLatitude) : null;
+    const dLon = destinationLongitude ? Number(destinationLongitude) : null;
+    if (sLat === null || sLon === null || dLat === null || dLon === null) {
+      setError("Source and destination coordinates are required."); setCreatingRide(false); return;
     }
-
-    if (
-      (sourceLatitude && Number.isNaN(parsedSourceLatitude)) ||
-      (sourceLongitude && Number.isNaN(parsedSourceLongitude)) ||
-      (destinationLatitude && Number.isNaN(parsedDestinationLatitude)) ||
-      (destinationLongitude && Number.isNaN(parsedDestinationLongitude))
-    ) {
-      setError("Please enter valid numeric latitude/longitude values.");
-      setCreatingRide(false);
-      return;
-    }
-
-    if (
-      parsedSourceLatitude !== null &&
-      (parsedSourceLatitude < -90 || parsedSourceLatitude > 90)
-    ) {
-      setError("Source latitude must be between -90 and 90.");
-      setCreatingRide(false);
-      return;
-    }
-
-    if (
-      parsedDestinationLatitude !== null &&
-      (parsedDestinationLatitude < -90 || parsedDestinationLatitude > 90)
-    ) {
-      setError("Destination latitude must be between -90 and 90.");
-      setCreatingRide(false);
-      return;
-    }
-
-    if (
-      parsedSourceLongitude !== null &&
-      (parsedSourceLongitude < -180 || parsedSourceLongitude > 180)
-    ) {
-      setError("Source longitude must be between -180 and 180.");
-      setCreatingRide(false);
-      return;
-    }
-
-    if (
-      parsedDestinationLongitude !== null &&
-      (parsedDestinationLongitude < -180 || parsedDestinationLongitude > 180)
-    ) {
-      setError("Destination longitude must be between -180 and 180.");
-      setCreatingRide(false);
-      return;
-    }
-
-    if (
-      parsedSourceLatitude === null ||
-      parsedSourceLongitude === null ||
-      parsedDestinationLatitude === null ||
-      parsedDestinationLongitude === null
-    ) {
-      setError(
-        "Source and destination coordinates are required to create a ride.",
-      );
-      setCreatingRide(false);
-      return;
-    }
-
     try {
       const res = await fetch(apiUrl("/rides"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          source: rideSource,
-          sourceLatitude: parsedSourceLatitude,
-          sourceLongitude: parsedSourceLongitude,
-          destination: rideDestination,
-          destinationLatitude: parsedDestinationLatitude,
-          destinationLongitude: parsedDestinationLongitude,
-          departureTime,
-          availableSeats: parsedSeats,
-        }),
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ source: rideSource, sourceLatitude: sLat, sourceLongitude: sLon, destination: rideDestination, destinationLatitude: dLat, destinationLongitude: dLon, departureTime, availableSeats: parsedSeats }),
       });
-
       if (!res.ok) {
-        let backendMessage = "Failed to create ride. Please check your details.";
-        try {
-          const errorBody = (await res.json()) as { error?: string; message?: string };
-          backendMessage = errorBody.error || errorBody.message || backendMessage;
-        } catch {
-          // Keep fallback message when response body is not JSON.
-        }
-        setError(backendMessage);
-        return;
+        let msg = "Failed to create ride.";
+        try { const b = (await res.json()) as { error?: string; message?: string }; msg = b.error || b.message || msg; } catch {}
+        setError(msg); return;
       }
-
-      setMessage("Ride created successfully.");
+      setMessage("Ride created successfully! 🚗");
       await Promise.all([fetchActiveRides(), fetchMyRides()]);
-      setRideSource("");
-      setRideDestination("");
-      setSourceLatitude("");
-      setSourceLongitude("");
-      setDestinationLatitude("");
-      setDestinationLongitude("");
-      setDepartureTime("");
-      setAvailableSeats("");
-    } catch (e) {
-      setError("Unable to create ride.");
-    } finally {
-      setCreatingRide(false);
-    }
+      setRideSource(""); setRideDestination(""); setSourceLatitude(""); setSourceLongitude("");
+      setDestinationLatitude(""); setDestinationLongitude(""); setDepartureTime(""); setAvailableSeats("");
+    } catch { setError("Unable to create ride."); }
+    finally { setCreatingRide(false); }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Loading dashboard...
+      <div style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #fdf6ec 0%, #fef3e8 50%, #fdf0f8 100%)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <style>{dashboardStyles}</style>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🚗</div>
+          <p className="font-body" style={{ color: "#a09890", fontSize: 15 }}>Loading your dashboard…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #fdf6ec 0%, #fef3e8 55%, #fdf0f8 100%)" }}>
+      <style>{dashboardStyles}</style>
+
       <DashboardHeader />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <ModeSwitch mode={mode} onModeChange={setMode} />
-        {error && <p className="mb-4 text-red-400">{error}</p>}
-        {message && <p className="mb-4 text-green-400">{message}</p>}
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
+
+        {/* Toast messages */}
+        {(error || message) && (
+          <div style={{
+            marginBottom: 20,
+            background: error ? "rgba(220,80,80,0.07)" : "rgba(120,200,120,0.1)",
+            border: `1.5px solid ${error ? "rgba(220,80,80,0.2)" : "rgba(120,200,120,0.25)"}`,
+            borderRadius: 14, padding: "12px 18px",
+            fontFamily: "var(--font-dm), sans-serif",
+            fontSize: 14, fontWeight: 500,
+            color: error ? "#c0392b" : "#3a8a3a",
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span>{error ? "⚠️" : "✅"}</span>
+            {error || message}
+          </div>
+        )}
+
+        <ModeSwitch mode={mode} onModeChange={(m) => { setMode(m); setError(""); setMessage(""); }} />
 
         {mode === "book" && (
           <BookRideSection
-            searchSource={searchSource}
-            searchDestination={searchDestination}
-            searchSourceLatitude={searchSourceLatitude}
-            searchSourceLongitude={searchSourceLongitude}
-            searchDestinationLatitude={searchDestinationLatitude}
-            searchDestinationLongitude={searchDestinationLongitude}
-            searchedRides={searchedRides}
-            activeRides={activeRides}
-            onSearchSourceChange={setSearchSource}
-            onSearchDestinationChange={setSearchDestination}
-            onSearchSourceLatitudeChange={setSearchSourceLatitude}
-            onSearchSourceLongitudeChange={setSearchSourceLongitude}
-            onSearchDestinationLatitudeChange={setSearchDestinationLatitude}
-            onSearchDestinationLongitudeChange={setSearchDestinationLongitude}
-            onSearch={handleSearchRides}
-            onBookRide={handleBookRide}
-            bookingRideId={bookingRideId}
+            searchSource={searchSource} searchDestination={searchDestination}
+            searchSourceLatitude={searchSourceLatitude} searchSourceLongitude={searchSourceLongitude}
+            searchDestinationLatitude={searchDestinationLatitude} searchDestinationLongitude={searchDestinationLongitude}
+            searchedRides={searchedRides} activeRides={activeRides}
+            onSearchSourceChange={setSearchSource} onSearchDestinationChange={setSearchDestination}
+            onSearchSourceLatitudeChange={setSearchSourceLatitude} onSearchSourceLongitudeChange={setSearchSourceLongitude}
+            onSearchDestinationLatitudeChange={setSearchDestinationLatitude} onSearchDestinationLongitudeChange={setSearchDestinationLongitude}
+            onSearch={handleSearchRides} onBookRide={handleBookRide} bookingRideId={bookingRideId}
           />
         )}
 
         {mode === "make" && (
           <MakeRideSection
-            driverStatus={driverStatus}
-            vehicleNumber={vehicleNumber}
-            vehicleModel={vehicleModel}
-            drivingLicense={drivingLicense}
-            submittingVerification={submittingVerification}
-            rideSource={rideSource}
-            rideDestination={rideDestination}
-            sourceLatitude={sourceLatitude}
-            sourceLongitude={sourceLongitude}
-            destinationLatitude={destinationLatitude}
-            destinationLongitude={destinationLongitude}
-            departureTime={departureTime}
-            availableSeats={availableSeats}
-            myRides={myRides}
-            creatingRide={creatingRide}
-            onVehicleNumberChange={setVehicleNumber}
-            onVehicleModelChange={setVehicleModel}
-            onDrivingLicenseChange={setDrivingLicense}
-            onSubmitVerification={handleSubmitVerification}
-            onRideSourceChange={setRideSource}
-            onRideDestinationChange={setRideDestination}
-            onSourceLatitudeChange={setSourceLatitude}
-            onSourceLongitudeChange={setSourceLongitude}
-            onDestinationLatitudeChange={setDestinationLatitude}
-            onDestinationLongitudeChange={setDestinationLongitude}
-            onDepartureTimeChange={setDepartureTime}
-            onAvailableSeatsChange={setAvailableSeats}
+            driverStatus={driverStatus} vehicleNumber={vehicleNumber} vehicleModel={vehicleModel}
+            drivingLicense={drivingLicense} submittingVerification={submittingVerification}
+            rideSource={rideSource} rideDestination={rideDestination}
+            sourceLatitude={sourceLatitude} sourceLongitude={sourceLongitude}
+            destinationLatitude={destinationLatitude} destinationLongitude={destinationLongitude}
+            departureTime={departureTime} availableSeats={availableSeats}
+            myRides={myRides} creatingRide={creatingRide}
+            onVehicleNumberChange={setVehicleNumber} onVehicleModelChange={setVehicleModel}
+            onDrivingLicenseChange={setDrivingLicense} onSubmitVerification={handleSubmitVerification}
+            onRideSourceChange={setRideSource} onRideDestinationChange={setRideDestination}
+            onSourceLatitudeChange={setSourceLatitude} onSourceLongitudeChange={setSourceLongitude}
+            onDestinationLatitudeChange={setDestinationLatitude} onDestinationLongitudeChange={setDestinationLongitude}
+            onDepartureTimeChange={setDepartureTime} onAvailableSeatsChange={setAvailableSeats}
             onCreateRide={handleCreateRide}
           />
         )}

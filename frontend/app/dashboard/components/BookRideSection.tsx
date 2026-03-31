@@ -1,23 +1,12 @@
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Map,
-  MapControls,
-  MapMarker,
-  MapRoute,
-  MarkerContent,
-  MarkerLabel,
-  type MapRef,
+  Map, MapControls, MapMarker, MapRoute,
+  MarkerContent, MarkerLabel, type MapRef,
 } from "@/components/ui/map";
 import { Ride, SearchRideResult } from "../types";
 
-type NominatimSuggestion = {
-  display_name: string;
-  lat: string;
-  lon: string;
-};
-
-const DEFAULT_MAP_CENTER: [number, number] = [73.8567, 18.5204];
+type NominatimSuggestion = { display_name: string; lat: string; lon: string };
+const DEFAULT_MAP_CENTER: [number, number] = [77.2090, 28.6139];
 
 function parseCoordinate(value: string): number | null {
   const parsed = Number(value);
@@ -44,24 +33,135 @@ type BookRideSectionProps = {
   bookingRideId: number | null;
 };
 
+function RideCard({
+  ride, estimatedFare, segmentDistanceKm, seatsByRide, setSeatsByRide, onBookRide, bookingRideId,
+}: {
+  ride: SearchRideResult["ride"] | Ride;
+  estimatedFare?: number;
+  segmentDistanceKm?: number;
+  seatsByRide?: Record<number, string>;
+  setSeatsByRide?: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  onBookRide?: (rideId: number, seats: number) => void;
+  bookingRideId?: number | null;
+}) {
+  const seatsValue = Math.max(1, Number(seatsByRide?.[ride.id] ?? "1") || 1);
+  const seatsExceeded = typeof ride.availableSeats === "number" && ride.availableSeats > 0
+    ? seatsValue > ride.availableSeats : false;
+
+  const statusColor = ride.status === "ACTIVE" ? "#3a8a3a" : "#a07010";
+  const statusBg   = ride.status === "ACTIVE" ? "rgba(120,200,120,0.12)" : "rgba(255,180,50,0.1)";
+
+  return (
+    <div className="d-card" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Route */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "#1e1e1e" }}>
+          {ride.source}
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff9b6a" strokeWidth="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "#1e1e1e" }}>
+          {ride.destination}
+        </span>
+        <span style={{
+          marginLeft: "auto", background: statusBg, color: statusColor,
+          border: `1px solid ${statusColor}30`, borderRadius: 50,
+          padding: "2px 10px", fontSize: 11, fontWeight: 600,
+          fontFamily: "var(--font-dm), sans-serif", textTransform: "uppercase", letterSpacing: "0.3px",
+        }}>
+          {ride.status ?? "-"}
+        </span>
+      </div>
+
+      {/* Meta grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 6 }}>
+        {[
+          { label: "Driver",   val: ride.driver?.name || "-" },
+          { label: "Gender",   val: ride.driver?.gender || "-" },
+          { label: "Phone",    val: ride.driver?.phoneNumber || "-" },
+          { label: "Vehicle",  val: `${ride.driver?.vehicleModel || "-"} (${ride.driver?.vehicleNumber || "-"})` },
+          { label: "Seats",    val: String(ride.availableSeats ?? "-") },
+          ...(ride.departureTime ? [{ label: "Departure", val: new Date(ride.departureTime).toLocaleString() }] : []),
+          ...(typeof (ride as Ride).distanceKm === "number" ? [{ label: "Distance", val: `${((ride as Ride).distanceKm!).toFixed(2)} km` }] : []),
+        ].map(({ label, val }) => (
+          <div key={label}>
+            <span className="d-label" style={{ marginBottom: 0 }}>{label}</span>
+            <span className="font-body" style={{ fontSize: 13, color: "#3a3530" }}> {val}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Fare */}
+      {estimatedFare !== undefined && (
+        <div style={{
+          background: "rgba(255,155,106,0.08)", border: "1px solid rgba(255,155,106,0.2)",
+          borderRadius: 12, padding: "10px 14px", display: "flex", gap: 20, flexWrap: "wrap",
+        }}>
+          <div>
+            <span className="d-label" style={{ marginBottom: 0 }}>Fare / seat</span>
+            <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "#cc6b3d" }}> ₹{Number(estimatedFare).toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="d-label" style={{ marginBottom: 0 }}>Segment</span>
+            <span className="font-body" style={{ fontSize: 13, color: "#cc6b3d", fontWeight: 600 }}> {Number(segmentDistanceKm).toFixed(2)} km</span>
+          </div>
+          <div>
+            <span className="d-label" style={{ marginBottom: 0 }}>Total ({seatsValue} seat{seatsValue > 1 ? "s" : ""})</span>
+            <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "#cc6b3d" }}> ₹{(estimatedFare * seatsValue).toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Book row */}
+      {onBookRide && seatsByRide && setSeatsByRide && (
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap", paddingTop: 4 }}>
+          <div>
+            <label className="d-label">Seats</label>
+            <input
+              type="number" min={1}
+              value={seatsByRide[ride.id] ?? "1"}
+              onChange={e => setSeatsByRide(prev => ({ ...prev, [ride.id]: e.target.value }))}
+              className="d-input"
+              style={{ width: 80 }}
+            />
+          </div>
+          <button
+            className="d-btn"
+            onClick={() => onBookRide(ride.id, Number(seatsByRide[ride.id] ?? "1"))}
+            disabled={bookingRideId === ride.id || ride.status !== "ACTIVE" || (ride.availableSeats ?? 0) <= 0 || seatsExceeded}
+          >
+            {bookingRideId === ride.id ? (
+              <>
+                <svg className="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                Booking...
+              </>
+            ) : "Book Ride →"}
+          </button>
+        </div>
+      )}
+
+      {seatsExceeded && <p className="d-error-text">Selected seats exceed available seats.</p>}
+      {ride.status !== "ACTIVE" && onBookRide && (
+        <p className="font-body" style={{ fontSize: 12, color: "#a07010" }}>
+          This ride is currently {ride.status}. Booking only available for ACTIVE rides.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function BookRideSection({
-  searchSource,
-  searchDestination,
-  searchSourceLatitude,
-  searchSourceLongitude,
-  searchDestinationLatitude,
-  searchDestinationLongitude,
-  searchedRides,
-  activeRides,
-  onSearchSourceChange,
-  onSearchDestinationChange,
-  onSearchSourceLatitudeChange,
-  onSearchSourceLongitudeChange,
-  onSearchDestinationLatitudeChange,
-  onSearchDestinationLongitudeChange,
-  onSearch,
-  onBookRide,
-  bookingRideId,
+  searchSource, searchDestination,
+  searchSourceLatitude, searchSourceLongitude,
+  searchDestinationLatitude, searchDestinationLongitude,
+  searchedRides, activeRides,
+  onSearchSourceChange, onSearchDestinationChange,
+  onSearchSourceLatitudeChange, onSearchSourceLongitudeChange,
+  onSearchDestinationLatitudeChange, onSearchDestinationLongitudeChange,
+  onSearch, onBookRide, bookingRideId,
 }: BookRideSectionProps) {
   const [sourceSuggestions, setSourceSuggestions] = useState<NominatimSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<NominatimSuggestion[]>([]);
@@ -70,187 +170,120 @@ export default function BookRideSection({
   const [seatsByRide, setSeatsByRide] = useState<Record<number, string>>({});
   const mapRef = useRef<MapRef | null>(null);
 
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        onSearchSourceChange("Current Location");
+        onSearchSourceLatitudeChange(String(pos.coords.latitude));
+        onSearchSourceLongitudeChange(String(pos.coords.longitude));
+        setSourceSuggestions([]);
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const sourcePoint = useMemo(() => {
-    const latitude = parseCoordinate(searchSourceLatitude);
-    const longitude = parseCoordinate(searchSourceLongitude);
-    if (latitude === null || longitude === null) {
-      return null;
-    }
-    return { latitude, longitude };
+    const lat = parseCoordinate(searchSourceLatitude), lon = parseCoordinate(searchSourceLongitude);
+    return lat !== null && lon !== null ? { latitude: lat, longitude: lon } : null;
   }, [searchSourceLatitude, searchSourceLongitude]);
 
   const destinationPoint = useMemo(() => {
-    const latitude = parseCoordinate(searchDestinationLatitude);
-    const longitude = parseCoordinate(searchDestinationLongitude);
-    if (latitude === null || longitude === null) {
-      return null;
-    }
-    return { latitude, longitude };
+    const lat = parseCoordinate(searchDestinationLatitude), lon = parseCoordinate(searchDestinationLongitude);
+    return lat !== null && lon !== null ? { latitude: lat, longitude: lon } : null;
   }, [searchDestinationLatitude, searchDestinationLongitude]);
 
   const routeCoordinates = useMemo<[number, number][]>(() => {
-    if (!sourcePoint || !destinationPoint) {
-      return [];
-    }
-
-    return [
-      [sourcePoint.longitude, sourcePoint.latitude],
-      [destinationPoint.longitude, destinationPoint.latitude],
-    ];
+    if (!sourcePoint || !destinationPoint) return [];
+    return [[sourcePoint.longitude, sourcePoint.latitude], [destinationPoint.longitude, destinationPoint.latitude]];
   }, [sourcePoint, destinationPoint]);
 
   useEffect(() => {
     const trimmed = searchSource.trim();
-    if (trimmed.length < 3) {
-      setSourceSuggestions([]);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
+    if (trimmed.length < 3) { setSourceSuggestions([]); return; }
+    const id = setTimeout(async () => {
       setIsSearchingSource(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(trimmed)}`
-        );
-        if (!res.ok) {
-          setSourceSuggestions([]);
-          return;
-        }
-        const data = (await res.json()) as NominatimSuggestion[];
-        setSourceSuggestions(data);
-      } catch {
-        setSourceSuggestions([]);
-      } finally {
-        setIsSearchingSource(false);
-      }
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(trimmed)}`);
+        setSourceSuggestions(res.ok ? (await res.json()) as NominatimSuggestion[] : []);
+      } catch { setSourceSuggestions([]); } finally { setIsSearchingSource(false); }
     }, 350);
-
-    return () => clearTimeout(timeoutId);
+    return () => clearTimeout(id);
   }, [searchSource]);
 
   useEffect(() => {
     const trimmed = searchDestination.trim();
-    if (trimmed.length < 3) {
-      setDestinationSuggestions([]);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
+    if (trimmed.length < 3) { setDestinationSuggestions([]); return; }
+    const id = setTimeout(async () => {
       setIsSearchingDestination(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(trimmed)}`
-        );
-        if (!res.ok) {
-          setDestinationSuggestions([]);
-          return;
-        }
-        const data = (await res.json()) as NominatimSuggestion[];
-        setDestinationSuggestions(data);
-      } catch {
-        setDestinationSuggestions([]);
-      } finally {
-        setIsSearchingDestination(false);
-      }
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(trimmed)}`);
+        setDestinationSuggestions(res.ok ? (await res.json()) as NominatimSuggestion[] : []);
+      } catch { setDestinationSuggestions([]); } finally { setIsSearchingDestination(false); }
     }, 350);
-
-    return () => clearTimeout(timeoutId);
+    return () => clearTimeout(id);
   }, [searchDestination]);
 
   useEffect(() => {
-    if (!mapRef.current || !sourcePoint || !destinationPoint) {
-      return;
-    }
-
-    const minLongitude = Math.min(sourcePoint.longitude, destinationPoint.longitude);
-    const maxLongitude = Math.max(sourcePoint.longitude, destinationPoint.longitude);
-    const minLatitude = Math.min(sourcePoint.latitude, destinationPoint.latitude);
-    const maxLatitude = Math.max(sourcePoint.latitude, destinationPoint.latitude);
-
+    if (!mapRef.current || !sourcePoint || !destinationPoint) return;
     mapRef.current.fitBounds(
-      [
-        [minLongitude, minLatitude],
-        [maxLongitude, maxLatitude],
-      ],
-      {
-        padding: 60,
-        duration: 700,
-        maxZoom: 15,
-      }
+      [[Math.min(sourcePoint.longitude, destinationPoint.longitude), Math.min(sourcePoint.latitude, destinationPoint.latitude)],
+       [Math.max(sourcePoint.longitude, destinationPoint.longitude), Math.max(sourcePoint.latitude, destinationPoint.latitude)]],
+      { padding: 60, duration: 700, maxZoom: 15 }
     );
   }, [sourcePoint, destinationPoint]);
 
-  const selectSourceSuggestion = (suggestion: NominatimSuggestion) => {
-    onSearchSourceChange(suggestion.display_name);
-    onSearchSourceLatitudeChange(suggestion.lat);
-    onSearchSourceLongitudeChange(suggestion.lon);
-    setSourceSuggestions([]);
-  };
-
-  const selectDestinationSuggestion = (suggestion: NominatimSuggestion) => {
-    onSearchDestinationChange(suggestion.display_name);
-    onSearchDestinationLatitudeChange(suggestion.lat);
-    onSearchDestinationLongitudeChange(suggestion.lon);
-    setDestinationSuggestions([]);
-  };
-
   return (
-    <section className="bg-zinc-900/60 border border-white/10 rounded-2xl p-6 space-y-6">
-      <h2 className="text-xl font-semibold">Search Rides</h2>
+    <div className="d-section" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <h2 className="d-section-title">Search Rides</h2>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="space-y-2 relative">
-          <label className="block text-sm text-white/70">Source</label>
-          <input
-            value={searchSource}
-            onChange={(e) => {
-              onSearchSourceChange(e.target.value);
-              onSearchSourceLatitudeChange("");
-              onSearchSourceLongitudeChange("");
-            }}
-            placeholder="Source"
-            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
-          />
-          {isSearchingSource && <p className="text-xs text-white/40">Searching...</p>}
+      {/* Location inputs */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* Source */}
+        <div style={{ position: "relative" }}>
+          <label className="d-label">From</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={searchSource}
+              onChange={e => { onSearchSourceChange(e.target.value); onSearchSourceLatitudeChange(""); onSearchSourceLongitudeChange(""); }}
+              placeholder="Pickup location"
+              className="d-input"
+            />
+            <button type="button" className="d-btn-ghost" onClick={useCurrentLocation}
+              style={{ flexShrink: 0, padding: "8px 12px" }} title="Use my location">
+              📍
+            </button>
+          </div>
+          {isSearchingSource && <p className="d-muted" style={{ marginTop: 4 }}>Searching…</p>}
           {sourceSuggestions.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-zinc-950 border border-white/10 rounded-xl overflow-hidden">
-              {sourceSuggestions.map((suggestion) => (
-                <button
-                  key={`${suggestion.lat}-${suggestion.lon}-${suggestion.display_name}`}
-                  type="button"
-                  onClick={() => selectSourceSuggestion(suggestion)}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-white/10"
-                >
-                  {suggestion.display_name}
+            <div className="d-suggestions">
+              {sourceSuggestions.map(s => (
+                <button key={`${s.lat}-${s.lon}`} type="button" className="d-suggestion-item"
+                  onClick={() => { onSearchSourceChange(s.display_name); onSearchSourceLatitudeChange(s.lat); onSearchSourceLongitudeChange(s.lon); setSourceSuggestions([]); }}>
+                  {s.display_name}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="space-y-2 relative">
-          <label className="block text-sm text-white/70">Destination</label>
+        {/* Destination */}
+        <div style={{ position: "relative" }}>
+          <label className="d-label">To</label>
           <input
             value={searchDestination}
-            onChange={(e) => {
-              onSearchDestinationChange(e.target.value);
-              onSearchDestinationLatitudeChange("");
-              onSearchDestinationLongitudeChange("");
-            }}
-            placeholder="Destination"
-            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3"
+            onChange={e => { onSearchDestinationChange(e.target.value); onSearchDestinationLatitudeChange(""); onSearchDestinationLongitudeChange(""); }}
+            placeholder="Drop-off location"
+            className="d-input"
           />
-          {isSearchingDestination && <p className="text-xs text-white/40">Searching...</p>}
+          {isSearchingDestination && <p className="d-muted" style={{ marginTop: 4 }}>Searching…</p>}
           {destinationSuggestions.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-zinc-950 border border-white/10 rounded-xl overflow-hidden">
-              {destinationSuggestions.map((suggestion) => (
-                <button
-                  key={`${suggestion.lat}-${suggestion.lon}-${suggestion.display_name}`}
-                  type="button"
-                  onClick={() => selectDestinationSuggestion(suggestion)}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-white/10"
-                >
-                  {suggestion.display_name}
+            <div className="d-suggestions">
+              {destinationSuggestions.map(s => (
+                <button key={`${s.lat}-${s.lon}`} type="button" className="d-suggestion-item"
+                  onClick={() => { onSearchDestinationChange(s.display_name); onSearchDestinationLatitudeChange(s.lat); onSearchDestinationLongitudeChange(s.lon); setDestinationSuggestions([]); }}>
+                  {s.display_name}
                 </button>
               ))}
             </div>
@@ -258,156 +291,65 @@ export default function BookRideSection({
         </div>
       </div>
 
-      <button onClick={onSearch} className="bg-white text-black font-semibold px-5 py-3 rounded-full">
-        Search
+      <button className="d-btn-accent" onClick={onSearch} style={{ alignSelf: "flex-start" }}>
+        Search Rides →
       </button>
 
-      <div className="space-y-2">
-        <label className="block text-sm text-white/70">Route Preview</label>
-        <div className="h-72 overflow-hidden rounded-xl border border-white/10">
-          <Map
-            ref={mapRef}
-            center={sourcePoint ? [sourcePoint.longitude, sourcePoint.latitude] : DEFAULT_MAP_CENTER}
-            zoom={12}
-            theme="dark"
-          >
+      {/* Map */}
+      <div>
+        <label className="d-label" style={{ marginBottom: 8 }}>Route Preview</label>
+        <div className="d-map">
+          <Map ref={mapRef} center={sourcePoint ? [sourcePoint.longitude, sourcePoint.latitude] : DEFAULT_MAP_CENTER} zoom={10} theme="light">
             {sourcePoint && (
               <MapMarker longitude={sourcePoint.longitude} latitude={sourcePoint.latitude}>
                 <MarkerContent>
-                  <div className="h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-black/50" />
-                  <MarkerLabel>Source</MarkerLabel>
+                  <div className="h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white/80" />
+                  <MarkerLabel>Pickup</MarkerLabel>
                 </MarkerContent>
               </MapMarker>
             )}
-
             {destinationPoint && (
               <MapMarker longitude={destinationPoint.longitude} latitude={destinationPoint.latitude}>
                 <MarkerContent>
-                  <div className="h-3 w-3 rounded-full bg-rose-400 ring-2 ring-black/50" />
-                  <MarkerLabel>Destination</MarkerLabel>
+                  <div className="h-3 w-3 rounded-full bg-rose-400 ring-2 ring-white/80" />
+                  <MarkerLabel>Drop-off</MarkerLabel>
                 </MarkerContent>
               </MapMarker>
             )}
-
-            {routeCoordinates.length === 2 && (
-              <MapRoute coordinates={routeCoordinates} color="#22d3ee" width={4} opacity={0.85} />
-            )}
-
+            {routeCoordinates.length === 2 && <MapRoute coordinates={routeCoordinates} color="#ff9b6a" width={4} opacity={0.85} />}
             <MapControls showZoom />
           </Map>
         </div>
       </div>
 
-      <div className="space-y-3 pt-2">
-        <h3 className="text-lg font-semibold">Search Results</h3>
-        {searchedRides.length === 0 && <p className="text-sm text-white/60">No searched rides yet.</p>}
-        {searchedRides.map(({ ride, estimatedFare, segmentDistanceKm }) => {
-          const seatsValue = Math.max(1, Number(seatsByRide[ride.id] ?? "1") || 1);
-          const totalFare = estimatedFare * seatsValue;
-          const seatsExceeded =
-            typeof ride.availableSeats === "number" && ride.availableSeats > 0
-              ? seatsValue > ride.availableSeats
-              : false;
+      <hr className="d-divider" />
 
-          return (
-          <div key={ride.id} className="border border-white/10 rounded-xl p-4 bg-zinc-950/40">
-            <p className="font-semibold">
-              {ride.source} to {ride.destination}
-            </p>
-            <p className="text-sm text-white/60">
-              Seats: {ride.availableSeats ?? "-"} | Status: {ride.status ?? "-"}
-            </p>
-            <p className="text-sm text-white/60">
-              Driver: {ride.driver?.name || "-"} ({ride.driver?.email || "-"})
-            </p>
-            <p className="text-sm text-white/60">
-              Gender: {ride.driver?.gender || "-"} | Phone: {ride.driver?.phoneNumber || "-"}
-            </p>
-            <p className="text-sm text-white/60">
-              Vehicle: {ride.driver?.vehicleNumber || "-"} ({ride.driver?.vehicleModel || "-"})
-            </p>
-            <p className="text-sm text-emerald-300">
-              Fare for 1 seat: Rs {Number(estimatedFare).toFixed(2)} | Segment: {Number(segmentDistanceKm).toFixed(2)} km
-            </p>
-            <p className="text-sm text-emerald-300">
-              Total Fare ({seatsValue} seat{seatsValue > 1 ? "s" : ""}): Rs {Number(totalFare).toFixed(2)}
-            </p>
-            {ride.departureTime && (
-              <p className="text-sm text-white/60">
-                Departure: {new Date(ride.departureTime).toLocaleString()}
-              </p>
-            )}
-
-            <div className="mt-3 flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <label className="block text-xs text-white/60">Seats</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={seatsByRide[ride.id] ?? "1"}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setSeatsByRide((prev) => ({ ...prev, [ride.id]: next }));
-                  }}
-                  className="w-24 bg-zinc-800 border border-white/10 rounded-lg px-3 py-2"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onBookRide(ride.id, Number(seatsByRide[ride.id] ?? "1"))}
-                disabled={
-                  bookingRideId === ride.id ||
-                  ride.status !== "ACTIVE" ||
-                  (ride.availableSeats ?? 0) <= 0 ||
-                  seatsExceeded
-                }
-                className="px-4 py-2 rounded-full bg-white text-black font-semibold disabled:opacity-50"
-              >
-                {bookingRideId === ride.id ? "Booking..." : "Book Ride"}
-              </button>
+      {/* Search results */}
+      <div>
+        <h3 className="d-subsection-title">Search Results</h3>
+        {searchedRides.length === 0
+          ? <p className="d-muted">Search above to find rides on your route.</p>
+          : <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {searchedRides.map(({ ride, estimatedFare, segmentDistanceKm }) => (
+                <RideCard key={ride.id} ride={ride} estimatedFare={estimatedFare} segmentDistanceKm={segmentDistanceKm}
+                  seatsByRide={seatsByRide} setSeatsByRide={setSeatsByRide} onBookRide={onBookRide} bookingRideId={bookingRideId} />
+              ))}
             </div>
-
-            {seatsExceeded && (
-              <p className="text-xs text-red-300 mt-2">
-                Selected seats exceed available seats for this ride.
-              </p>
-            )}
-
-            {ride.status !== "ACTIVE" && (
-              <p className="text-xs text-amber-300 mt-2">
-                This ride is currently {ride.status}. Booking is available only for ACTIVE rides.
-              </p>
-            )}
-          </div>
-        )})}
+        }
       </div>
 
-      <div className="space-y-3 pt-2">
-        <h3 className="text-lg font-semibold">All Active Rides</h3>
-        {activeRides.length === 0 && <p className="text-sm text-white/60">No active rides available right now.</p>}
-        {activeRides.map((ride) => (
-          <div key={ride.id} className="border border-white/10 rounded-xl p-4 bg-zinc-950/40">
-            <p className="font-semibold">
-              {ride.source} to {ride.destination}
-            </p>
-            <p className="text-sm text-white/60">
-              Seats: {ride.availableSeats ?? "-"} | Status: {ride.status ?? "-"}
-            </p>
-            <p className="text-sm text-white/60">
-              Driver: {ride.driver?.name || "-"} ({ride.driver?.email || "-"})
-            </p>
-            {typeof ride.distanceKm === "number" && (
-              <p className="text-sm text-white/60">Distance: {ride.distanceKm.toFixed(2)} km</p>
-            )}
-            {ride.departureTime && (
-              <p className="text-sm text-white/60">
-                Departure: {new Date(ride.departureTime).toLocaleString()}
-              </p>
-            )}
-          </div>
-        ))}
+      <hr className="d-divider" />
+
+      {/* All active rides */}
+      <div>
+        <h3 className="d-subsection-title">All Active Rides</h3>
+        {activeRides.length === 0
+          ? <p className="d-muted">No active rides available right now.</p>
+          : <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {activeRides.map(ride => <RideCard key={ride.id} ride={ride} />)}
+            </div>
+        }
       </div>
-    </section>
+    </div>
   );
 }
