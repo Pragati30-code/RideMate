@@ -1,9 +1,8 @@
 "use client";
-export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import {
   Map, MapControls, MapMarker,
   MarkerContent, MarkerLabel, type MapRef,
@@ -144,8 +143,7 @@ function statusBadgeClass(status?: string) {
   }
 }
 
-// ✅ SEPARATE COMPONENT THAT USES useSearchParams
-function DriverDashboardContent() {
+export default function DriverDashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mapRef = useRef<MapRef | null>(null);
@@ -157,6 +155,7 @@ function DriverDashboardContent() {
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [rideActionLoading, setRideActionLoading] = useState<"start" | "end" | null>(null);
   const [passengerActionLoadingId, setPassengerActionLoadingId] = useState<number | null>(null);
+  const [locatingForMaps, setLocatingForMaps] = useState(false);
 
   const dropMarkers = useMemo(
     () => bookings.filter(b => typeof b.dropLatitude === "number" && typeof b.dropLongitude === "number"),
@@ -169,6 +168,61 @@ function DriverDashboardContent() {
     pickedUp:  bookings.filter(b => b.status === "PICKED_UP").length,
     dropped:   bookings.filter(b => b.status === "DROPPED").length,
   }), [bookings]);
+
+  // Haversine distance in km between two lat/lon points
+  const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  // Get driver's current location → find nearest unfinished passenger → open Google Maps
+  const openGoogleMaps = () => {
+    if (selectedRide?.status !== "IN_PROGRESS") return;
+
+    // Only consider CONFIRMED (not yet picked up) or PICKED_UP (need to drop) passengers
+    const pending = dropMarkers.filter(
+      b => b.status === "CONFIRMED" || b.status === "PICKED_UP"
+    );
+
+    if (pending.length === 0) {
+      alert("No pending passengers left on this ride.");
+      return;
+    }
+
+    setLocatingForMaps(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const driverLat = pos.coords.latitude;
+        const driverLon = pos.coords.longitude;
+
+        // Find nearest passenger by haversine distance
+        let nearest = pending[0];
+        let minDist = haversine(driverLat, driverLon, nearest.dropLatitude as number, nearest.dropLongitude as number);
+
+        for (const b of pending.slice(1)) {
+          const dist = haversine(driverLat, driverLon, b.dropLatitude as number, b.dropLongitude as number);
+          if (dist < minDist) { minDist = dist; nearest = b; }
+        }
+
+        const destLat = nearest.dropLatitude as number;
+        const destLon = nearest.dropLongitude as number;
+
+        // Google Maps directions URL: current location → nearest passenger drop
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${driverLat},${driverLon}&destination=${destLat},${destLon}&travelmode=driving`;
+        window.open(url, "_blank");
+        setLocatingForMaps(false);
+      },
+      () => {
+        alert("Could not get your location. Please allow location access.");
+        setLocatingForMaps(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const fetchMyRides = async () => {
     const res = await fetch(apiUrl("/rides/my-rides"), { headers: getAuthHeaders() });
@@ -403,36 +457,93 @@ function DriverDashboardContent() {
 
             {/* Map */}
             <div className="dd-section">
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <div style={{ marginBottom:16 }}>
                 <h2 className="font-display" style={{ fontSize:19, fontWeight:800, color:"#1e1e1e", letterSpacing:"-0.4px" }}>Passenger Drop Map</h2>
-                <span className="font-body" style={{ fontSize:12, color:"#a09890" }}>Source + all drop points</span>
+                {selectedRide.status === "IN_PROGRESS" && (
+                  <p className="font-body" style={{ fontSize:12, color:"#a09890", marginTop:3 }}>
+                    🗺️ Tap the map to navigate to the nearest passenger
+                  </p>
+                )}
               </div>
-              <div className="dd-map">
-                <Map
-                  ref={mapRef}
-                  center={typeof selectedRide.sourceLongitude === "number" && typeof selectedRide.sourceLatitude === "number"
-                    ? [selectedRide.sourceLongitude, selectedRide.sourceLatitude]
-                    : DEFAULT_MAP_CENTER}
-                  zoom={10} theme="light"
-                >
-                  {typeof selectedRide.sourceLongitude === "number" && typeof selectedRide.sourceLatitude === "number" && (
-                    <MapMarker longitude={selectedRide.sourceLongitude} latitude={selectedRide.sourceLatitude}>
-                      <MarkerContent>
-                        <div className="h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white/80" />
-                        <MarkerLabel>Source</MarkerLabel>
-                      </MarkerContent>
-                    </MapMarker>
-                  )}
-                  {dropMarkers.map(b => (
-                    <MapMarker key={b.id} longitude={b.dropLongitude as number} latitude={b.dropLatitude as number}>
-                      <MarkerContent>
-                        <div className="h-3 w-3 rounded-full ring-2 ring-white/80" style={{ background:"#ff9b6a" }} />
-                        <MarkerLabel>{b.user?.name || `Booking ${b.id}`}</MarkerLabel>
-                      </MarkerContent>
-                    </MapMarker>
-                  ))}
-                  <MapControls showZoom />
-                </Map>
+
+              {/* Clickable map overlay when ride is IN_PROGRESS */}
+              <div
+                style={{ position:"relative", cursor: selectedRide.status === "IN_PROGRESS" ? "pointer" : "default" }}
+                onClick={selectedRide.status === "IN_PROGRESS" ? openGoogleMaps : undefined}
+                title={selectedRide.status === "IN_PROGRESS" ? "Click to open Google Maps navigation" : undefined}
+              >
+                <div className="dd-map">
+                  <Map
+                    ref={mapRef}
+                    center={typeof selectedRide.sourceLongitude === "number" && typeof selectedRide.sourceLatitude === "number"
+                      ? [selectedRide.sourceLongitude, selectedRide.sourceLatitude]
+                      : DEFAULT_MAP_CENTER}
+                    zoom={10} theme="light"
+                  >
+                    {typeof selectedRide.sourceLongitude === "number" && typeof selectedRide.sourceLatitude === "number" && (
+                      <MapMarker longitude={selectedRide.sourceLongitude} latitude={selectedRide.sourceLatitude}>
+                        <MarkerContent>
+                          <div className="h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white/80" />
+                          <MarkerLabel>Source</MarkerLabel>
+                        </MarkerContent>
+                      </MapMarker>
+                    )}
+                    {dropMarkers.map(b => (
+                      <MapMarker key={b.id} longitude={b.dropLongitude as number} latitude={b.dropLatitude as number}>
+                        <MarkerContent>
+                          <div
+                            className="h-3 w-3 rounded-full ring-2 ring-white/80"
+                            style={{ background: b.status === "DROPPED" ? "#a0a0a0" : b.status === "PICKED_UP" ? "#ffb347" : "#ff9b6a" }}
+                          />
+                          <MarkerLabel>{b.user?.name || `Booking ${b.id}`}</MarkerLabel>
+                        </MarkerContent>
+                      </MapMarker>
+                    ))}
+                    <MapControls showZoom />
+                  </Map>
+                </div>
+
+                {/* Overlay hint shown only when IN_PROGRESS */}
+                {selectedRide.status === "IN_PROGRESS" && !locatingForMaps && (
+                  <div style={{
+                    position:"absolute", bottom:12, left:"50%", transform:"translateX(-50%)",
+                    background:"rgba(45,45,45,0.82)", backdropFilter:"blur(8px)",
+                    color:"#fdf6ec", borderRadius:50, padding:"7px 18px",
+                    fontFamily:"var(--font-dm),sans-serif", fontSize:12, fontWeight:500,
+                    pointerEvents:"none", whiteSpace:"nowrap",
+                    boxShadow:"0 4px 16px rgba(45,45,45,0.25)",
+                  }}>
+                    🗺️ Tap map to navigate → nearest passenger
+                  </div>
+                )}
+                {locatingForMaps && (
+                  <div style={{
+                    position:"absolute", inset:0, borderRadius:16,
+                    background:"rgba(255,255,255,0.55)", backdropFilter:"blur(4px)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontFamily:"var(--font-dm),sans-serif", fontSize:14, color:"#3a3530", fontWeight:500, gap:8,
+                  }}>
+                    <svg className="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    Getting your location…
+                  </div>
+                )}
+              </div>
+
+              {/* Legend */}
+              <div style={{ display:"flex", gap:16, marginTop:12, flexWrap:"wrap" }}>
+                {[
+                  { color:"#22c55e",  label:"Source" },
+                  { color:"#ff9b6a",  label:"Confirmed (pending pickup)" },
+                  { color:"#ffb347",  label:"Picked up (en route)" },
+                  { color:"#a0a0a0",  label:"Dropped" },
+                ].map(({ color, label }) => (
+                  <div key={label} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <div style={{ width:10, height:10, borderRadius:"50%", background:color, flexShrink:0 }} />
+                    <span className="font-body" style={{ fontSize:12, color:"#a09890" }}>{label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -495,21 +606,5 @@ function DriverDashboardContent() {
         )}
       </main>
     </div>
-  );
-}
-
-// MAIN PAGE COMPONENT - WRAPS CONTENT IN SUSPENSE
-export default function DriverDashboardPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#fdf6ec 0%,#fef3e8 50%,#fdf0f8 100%)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-        <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:32, marginBottom:12 }}>🚗</div>
-          <p style={{ fontFamily:"var(--font-dm), sans-serif", color:"#a09890", fontSize:15 }}>Loading…</p>
-        </div>
-      </div>
-    }>
-      <DriverDashboardContent />
-    </Suspense>
   );
 }
