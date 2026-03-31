@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Map, MapControls, MapMarker,
@@ -143,7 +143,7 @@ function statusBadgeClass(status?: string) {
   }
 }
 
-export default function DriverDashboardPage() {
+function DriverDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mapRef = useRef<MapRef | null>(null);
@@ -169,7 +169,6 @@ export default function DriverDashboardPage() {
     dropped:   bookings.filter(b => b.status === "DROPPED").length,
   }), [bookings]);
 
-  // Haversine distance in km between two lat/lon points
   const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -178,11 +177,9 @@ export default function DriverDashboardPage() {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   };
 
-  // Get driver's current location → find nearest unfinished passenger → open Google Maps
   const openGoogleMaps = () => {
     if (selectedRide?.status !== "IN_PROGRESS") return;
 
-    // Only consider CONFIRMED (not yet picked up) or PICKED_UP (need to drop) passengers
     const pending = dropMarkers.filter(
       b => b.status === "CONFIRMED" || b.status === "PICKED_UP"
     );
@@ -199,7 +196,6 @@ export default function DriverDashboardPage() {
         const driverLat = pos.coords.latitude;
         const driverLon = pos.coords.longitude;
 
-        // Find nearest passenger by haversine distance
         let nearest = pending[0];
         let minDist = haversine(driverLat, driverLon, nearest.dropLatitude as number, nearest.dropLongitude as number);
 
@@ -211,7 +207,6 @@ export default function DriverDashboardPage() {
         const destLat = nearest.dropLatitude as number;
         const destLon = nearest.dropLongitude as number;
 
-        // Google Maps directions URL: current location → nearest passenger drop
         const url = `https://www.google.com/maps/dir/?api=1&origin=${driverLat},${driverLon}&destination=${destLat},${destLon}&travelmode=driving`;
         window.open(url, "_blank");
         setLocatingForMaps(false);
@@ -606,5 +601,21 @@ export default function DriverDashboardPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function DriverDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#fdf6ec 0%,#fef3e8 50%,#fdf0f8 100%)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <style>{styles}</style>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:32, marginBottom:12 }}>🚗</div>
+          <p style={{ color:"#a09890", fontSize:15, fontFamily:"sans-serif" }}>Loading driver dashboard…</p>
+        </div>
+      </div>
+    }>
+      <DriverDashboardContent />
+    </Suspense>
   );
 }
