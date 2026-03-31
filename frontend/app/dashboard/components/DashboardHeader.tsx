@@ -15,11 +15,11 @@ export default function DashboardHeader() {
       <div style={{
         maxWidth: 1100,
         margin: "0 auto",
-        padding: "14px 28px",
+        padding: "12px 16px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 16,
+        gap: 10,
       }}>
 
         {/* Logo */}
@@ -51,7 +51,7 @@ export default function DashboardHeader() {
               background: "transparent",
               border: "1.5px solid rgba(45,45,45,0.15)",
               borderRadius: 50,
-              padding: "8px 18px",
+              padding: "8px 14px",
               fontFamily: "var(--font-dm), sans-serif",
               fontSize: 13,
               fontWeight: 500,
@@ -63,7 +63,8 @@ export default function DashboardHeader() {
             onMouseOver={e => (e.currentTarget.style.background = "rgba(45,45,45,0.06)")}
             onMouseOut={e => (e.currentTarget.style.background = "transparent")}
             >
-              My Ride Dashboard
+              <span className="hidden sm:inline">My Ride Dashboard</span>
+              <span className="sm:hidden">My Rides</span>
             </button>
           </Link>
 

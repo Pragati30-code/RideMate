@@ -116,4 +116,20 @@ export const driverDashboardStyles = `
   .badge-dropped    { background: rgba(100,200,120,0.12); color: #2e7d32; border: 1px solid rgba(100,200,120,0.25); }
 
   .dd-divider { border: none; border-top: 1.5px solid rgba(45,45,45,0.07); margin: 0; }
+
+  /* ---- Mobile overrides ---- */
+  @media (max-width: 640px) {
+    .dd-section {
+      padding: 16px;
+      border-radius: 18px;
+    }
+    .dd-card {
+      padding: 14px;
+      border-radius: 16px;
+    }
+    .dd-map { height: 220px; }
+    .dd-btn { font-size: 12px; padding: 8px 14px; }
+    .dd-table th { padding: 10px 10px; font-size: 10px; }
+    .dd-table td { padding: 10px 10px; font-size: 12px; }
+  }
 `;

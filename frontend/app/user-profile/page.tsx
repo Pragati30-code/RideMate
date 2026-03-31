@@ -57,7 +57,7 @@ const styles = `
     backdrop-filter: blur(16px);
     border: 1.5px solid rgba(255,255,255,0.9);
     border-radius: 24px;
-    padding: 28px 32px;
+    padding: clamp(18px, 4vw, 32px);
     box-shadow: 0 4px 24px rgba(180,140,100,0.07);
   }
 
@@ -118,6 +118,13 @@ const styles = `
   }
 
   .up-divider { border: none; border-top: 1.5px solid rgba(45,45,45,0.07); margin: 4px 0; }
+
+  @media (max-width: 640px) {
+    .up-card    { padding: 16px; border-radius: 16px; }
+    .up-section { border-radius: 18px; }
+    .up-btn     { font-size: 12px; padding: 8px 14px; }
+    .up-avatar  { width: 52px; height: 52px; font-size: 20px; }
+  }
 `;
 
 function verificationBadgeClass(status?: string, isVerified?: boolean) {
@@ -207,7 +214,7 @@ export default function UserProfilePage() {
 
       {/* Header */}
       <header style={{ background:"rgba(255,255,255,0.75)", backdropFilter:"blur(20px)", borderBottom:"1.5px solid rgba(255,255,255,0.9)", boxShadow:"0 2px 16px rgba(180,140,100,0.08)", position:"sticky", top:0, zIndex:50 }}>
-        <div style={{ maxWidth:860, margin:"0 auto", padding:"14px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ maxWidth:860, margin:"0 auto", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
           <Link href="/" style={{ display:"flex", alignItems:"center", gap:8, textDecoration:"none" }}>
             <div style={{ width:34, height:34, background:"#2d2d2d", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 3px 10px rgba(45,45,45,0.18)" }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
@@ -235,7 +242,7 @@ export default function UserProfilePage() {
         </div>
       </header>
 
-      <main style={{ maxWidth:860, margin:"0 auto", padding:"32px 24px", display:"flex", flexDirection:"column", gap:24 }}>
+      <main style={{ maxWidth:860, margin:"0 auto", padding:"20px 16px", display:"flex", flexDirection:"column", gap:20 }}>
 
         {/* Profile hero card */}
         <div className="up-card fade-up-1" style={{ display:"flex", alignItems:"center", gap:20, flexWrap:"wrap" }}>

@@ -17,14 +17,15 @@ export default function DriverDashboardHeader() {
         style={{
           maxWidth: 1100,
           margin: "0 auto",
-          padding: "14px 28px",
+          padding: "12px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 10,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}>
             <div
               style={{
                 width: 34,
@@ -53,14 +54,15 @@ export default function DriverDashboardHeader() {
               RideMate
             </span>
           </Link>
-          <span style={{ color: "#c0b8b2", fontSize: 16 }}>·</span>
-          <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: "#6b6560", letterSpacing: "-0.2px" }}>
+          <span className="hidden sm:inline" style={{ color: "#c0b8b2", fontSize: 16 }}>·</span>
+          <span className="hidden sm:inline font-display" style={{ fontSize: 16, fontWeight: 700, color: "#6b6560", letterSpacing: "-0.2px" }}>
             Driver Dashboard
           </span>
         </div>
-        <Link href="/dashboard" style={{ textDecoration: "none" }}>
-          <button className="dd-btn dd-btn-dark" style={{ padding: "8px 18px", fontSize: 13 }}>
-            ← Back to Dashboard
+        <Link href="/dashboard" style={{ textDecoration: "none", flexShrink: 0 }}>
+          <button className="dd-btn dd-btn-dark" style={{ padding: "8px 14px", fontSize: 13 }}>
+            <span className="hidden sm:inline">← Back to Dashboard</span>
+            <span className="sm:hidden">← Back</span>
           </button>
         </Link>
       </div>

@@ -2,13 +2,13 @@ import Link from "next/link";
 
 export default function CTABanner() {
   return (
-    <section style={{ padding: "60px 32px" }}>
+    <section className="px-4 sm:px-8" style={{ paddingTop: 60, paddingBottom: 60 }}>
       <div style={{
         maxWidth:       1200,
         margin:         "0 auto",
         background:     "#2d2d2d",
-        borderRadius:   32,
-        padding:        "52px 48px",
+        borderRadius:   24,
+        padding:        "clamp(28px, 5vw, 52px) clamp(20px, 5vw, 48px)",
         display:        "flex",
         flexWrap:       "wrap",
         alignItems:     "center",

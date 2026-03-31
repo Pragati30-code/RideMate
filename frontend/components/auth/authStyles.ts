@@ -102,4 +102,12 @@ export const authStyles = `
     outline: none !important;
   }
   [data-radix-select-trigger][data-placeholder] { color: #c0b8b2 !important; }
+
+  /* ---- Mobile overrides ---- */
+  @media (max-width: 480px) {
+    .auth-input { font-size: 14px; padding: 12px 14px; }
+    .auth-btn   { font-size: 14px; padding: 13px; }
+    .auth-label { font-size: 11.5px; }
+    [data-radix-select-trigger] { font-size: 14px !important; padding: 12px 14px !important; }
+  }
 `;

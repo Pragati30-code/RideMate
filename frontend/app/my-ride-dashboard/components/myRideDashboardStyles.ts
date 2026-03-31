@@ -117,4 +117,20 @@ export const myRideDashboardStyles = `
     border-radius: 14px; padding: 14px 18px;
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
   }
+
+  /* ---- Mobile overrides ---- */
+  @media (max-width: 640px) {
+    .mrd-section {
+      padding: 16px;
+      border-radius: 18px;
+    }
+    .mrd-card {
+      padding: 14px;
+      border-radius: 16px;
+    }
+    .mrd-map { height: 220px; }
+    .mrd-btn { font-size: 12px; padding: 8px 18px; }
+    .mrd-table th { padding: 10px 10px; font-size: 10px; }
+    .mrd-table td { padding: 10px 10px; font-size: 12px; }
+  }
 `;

@@ -206,4 +206,18 @@ export const globalStyles = `
     font-weight: 600;
     margin-bottom: 16px;
   }
+
+  /* ---- Mobile overrides ---- */
+  @media (max-width: 640px) {
+    .feature-card { padding: 22px 18px; border-radius: 18px; }
+    .floating-card { min-width: 150px; padding: 12px 14px; gap: 10px; }
+    .btn-main  { padding: 12px 22px; font-size: 13px; }
+    .btn-outline { padding: 10px 20px; font-size: 13px; }
+    .btn-cta   { padding: 13px 26px; font-size: 14px; }
+    .tag-value { font-size: 14px; }
+    .nav-pill  { padding: 8px 14px; }
+  }
+  @media (max-width: 480px) {
+    .floating-card { display: none; }
+  }
 `;

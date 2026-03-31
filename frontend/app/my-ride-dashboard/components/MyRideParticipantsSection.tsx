@@ -33,7 +33,7 @@ export default function MyRideParticipantsSection({
 
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "Total", value: passengerStats.total, color: "#1e1e1e" },
           { label: "Confirmed", value: passengerStats.confirmed, color: "#1a5ea8" },

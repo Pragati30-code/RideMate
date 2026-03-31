@@ -57,9 +57,16 @@ ACTIVE / FULL → CANCELLED (driver calls PUT /rides/{id}/cancel)
 ## Booking Status Flow
 
 ```
-CONFIRMED → PICKED_UP (driver calls PUT /bookings/{id}/pickup)
+CONFIRMED → PICKED_UP (driver calls PUT /bookings/{id}/pickup with passenger OTP)
 PICKED_UP → DROPPED   (driver calls PUT /bookings/{id}/drop)
 CONFIRMED → CANCELLED (passenger calls PUT /bookings/{id}/cancel)
+```
+
+## Payment Status Flow (Booking)
+
+```
+UNPAID → PAID (passenger verifies Razorpay payment after drop)
+PAID → REFUND_INITIATED (if booking is cancelled after payment)
 ```
 
 ## Fare Calculation
@@ -90,7 +97,8 @@ Request body:
   "email": "khushi@example.com",
   "password": "Khushi@123",
   "studentId": "STU001",
-  "gender": "Female"
+  "gender": "Female",
+  "phoneNumber": "9876543210"
 }
 ```
 
@@ -103,7 +111,10 @@ Success response:
   "email": "khushi@example.com",
   "studentId": "STU001",
   "gender": "Female",
+  "phoneNumber": "9876543210",
+  "rideOtp": "482913",
   "vehicleNumber": null,
+  "vehicleModel": null,
   "drivingLicense": null,
   "verifiedDriver": false,
   "role": "USER",
@@ -155,7 +166,10 @@ Success response:
   "email": "khushi@example.com",
   "studentId": "STU001",
   "gender": "Female",
+  "phoneNumber": "9876543210",
+  "rideOtp": "482913",
   "vehicleNumber": "MH12AB1234",
+  "vehicleModel": "Hyundai i20",
   "drivingLicense": "DL1234567890123",
   "verifiedDriver": false,
   "role": "USER",
@@ -171,7 +185,7 @@ Success response:
 
 - Method: `GET`
 - URL: `/users`
-- Auth required: `Yes`
+- Auth required: `Yes (ADMIN only)`
 
 Request body: `None`
 
@@ -185,7 +199,10 @@ Success response:
     "email": "khushi@example.com",
     "studentId": "STU001",
     "gender": "Female",
+    "phoneNumber": "9876543210",
+    "rideOtp": "482913",
     "vehicleNumber": "MH12AB1234",
+    "vehicleModel": "Hyundai i20",
     "drivingLicense": "DL1234567890123",
     "verifiedDriver": false,
     "role": "USER",
@@ -207,6 +224,7 @@ Request body:
 ```json
 {
   "vehicleNumber": "MH12AB1234",
+  "vehicleModel": "Hyundai i20",
   "drivingLicense": "DL1234567890123"
 }
 ```
@@ -234,6 +252,7 @@ Success response:
   "isVerifiedDriver": false,
   "verificationStatus": "PENDING",
   "vehicleNumber": "MH12AB1234",
+  "vehicleModel": "Hyundai i20",
   "drivingLicense": "DL1234567890123",
   "detailsSubmitted": true
 }
@@ -276,6 +295,7 @@ Notes:
 - `sourceLatitude` / `destinationLatitude` must be between `-90` and `90`
 - `sourceLongitude` / `destinationLongitude` must be between `-180` and `180`
 - Coordinates are required for search and fare calculation
+- Backend DTO has `price`, but ride creation logic ignores it
 
 Success response:
 
@@ -502,7 +522,39 @@ Request body: `None`
 
 Success response: array of booking objects (same shape as 4.1 response).
 
-### 4.3 Cancel My Booking
+### 4.3 Get My Current Booking
+
+- Method: `GET`
+- URL: `/bookings/my-current`
+- Auth required: `Yes`
+
+Request body: `None`
+
+Responses:
+- `200 OK` with one booking object if current active/in-progress booking exists
+- `204 No Content` if no current booking
+
+### 4.4 Get Bookings For My Ride (Driver)
+
+- Method: `GET`
+- URL: `/bookings/driver/ride/{rideId}`
+- Auth required: `Yes (must be the ride's driver)`
+
+Request body: `None`
+
+Success response: array of bookings for that ride.
+
+### 4.5 Get Ride Participants (Driver or Passenger)
+
+- Method: `GET`
+- URL: `/bookings/ride/{rideId}/participants`
+- Auth required: `Yes (must be ride driver or a passenger on that ride)`
+
+Request body: `None`
+
+Success response: array of bookings for that ride excluding `CANCELLED` bookings.
+
+### 4.6 Cancel My Booking
 
 Only works if booking is `CONFIRMED`. Cannot cancel if status is `PICKED_UP` or `DROPPED`. Cancelling automatically restores the seat on the ride, and flips ride status from `FULL` back to `ACTIVE` if applicable.
 
@@ -518,11 +570,14 @@ Success response:
 {
   "id": 50,
   "seatsBooked": 1,
-  "status": "CANCELLED"
+  "status": "CANCELLED",
+  "paymentStatus": "UNPAID"
 }
 ```
 
-### 4.4 Mark Passenger as Picked Up
+If booking was already paid, `paymentStatus` becomes `REFUND_INITIATED`.
+
+### 4.7 Mark Passenger as Picked Up
 
 Driver marks a specific passenger's booking as picked up. Ride must be `IN_PROGRESS`.
 
@@ -530,7 +585,13 @@ Driver marks a specific passenger's booking as picked up. Ride must be `IN_PROGR
 - URL: `/bookings/{bookingId}/pickup`
 - Auth required: `Yes (must be the ride's driver)`
 
-Request body: `None`
+Request body:
+
+```json
+{
+  "otp": "482913"
+}
+```
 
 Success response:
 
@@ -541,7 +602,9 @@ Success response:
 }
 ```
 
-### 4.5 Mark Passenger as Dropped
+Error cases include missing OTP or invalid OTP.
+
+### 4.8 Mark Passenger as Dropped
 
 Driver marks a specific passenger's booking as dropped. Booking must be `PICKED_UP`.
 
@@ -559,6 +622,53 @@ Success response:
   "status": "DROPPED"
 }
 ```
+
+### 4.9 Create Razorpay Order For Booking
+
+Passenger creates payment order after drop.
+
+- Method: `POST`
+- URL: `/bookings/{bookingId}/payments/razorpay/order`
+- Auth required: `Yes (must be booking passenger)`
+
+Request body: `None`
+
+Success response:
+
+```json
+{
+  "keyId": "rzp_test_abc123",
+  "orderId": "order_Q1w2e3r4",
+  "amount": 3784,
+  "currency": "INR",
+  "bookingId": "50"
+}
+```
+
+Notes:
+- `amount` is in paise
+- Allowed only when booking status is `DROPPED`
+
+### 4.10 Verify Razorpay Payment
+
+- Method: `POST`
+- URL: `/bookings/{bookingId}/payments/razorpay/verify`
+- Auth required: `Yes (must be booking passenger)`
+
+Request body:
+
+```json
+{
+  "razorpayOrderId": "order_Q1w2e3r4",
+  "razorpayPaymentId": "pay_A1b2c3d4",
+  "razorpaySignature": "generated_signature"
+}
+```
+
+Success response: updated booking with:
+- `paymentStatus: "PAID"`
+- `paymentProvider: "RAZORPAY"`
+- `paymentId`, `paymentSignature`, `paidAt` populated
 
 ---
 
@@ -583,7 +693,10 @@ Success response:
     "name": "Rahul",
     "email": "rahul@example.com",
     "studentId": "STU002",
+    "gender": "Male",
+    "phoneNumber": "9123456789",
     "vehicleNumber": "MH14XY5678",
+    "vehicleModel": "Maruti Swift",
     "drivingLicense": "DL9988776655443",
     "verificationStatus": "PENDING"
   }
@@ -634,9 +747,12 @@ Success response:
 6. Approve Khushi's request
 7. Login again as Khushi and create a ride (`/rides`) — no price field needed
 8. Register and login as another user (Rahul)
-9. Search rides with Rahul's pickup + drop coordinates (`/rides/search`) — note `estimatedFare` in results
-10. Book the ride with pickup/drop details (`/bookings`)
-11. Login as Khushi and start the ride (`/rides/{id}/start`)
-12. Mark Rahul as picked up (`/bookings/{id}/pickup`)
-13. Mark Rahul as dropped (`/bookings/{id}/drop`)
-14. End the ride (`/rides/{id}/end`)
+9. Check OTP in Rahul profile (`GET /auth/me`, `rideOtp` field)
+10. Search rides with Rahul's pickup + drop coordinates (`/rides/search`) — note `estimatedFare` in results
+11. Book the ride with pickup/drop details (`/bookings`)
+12. Login as Khushi and start the ride (`/rides/{id}/start`)
+13. Mark Rahul as picked up with OTP body (`/bookings/{id}/pickup`)
+14. Mark Rahul as dropped (`/bookings/{id}/drop`)
+15. Rahul creates Razorpay order (`/bookings/{id}/payments/razorpay/order`)
+16. Rahul verifies payment (`/bookings/{id}/payments/razorpay/verify`)
+17. End the ride (`/rides/{id}/end`)

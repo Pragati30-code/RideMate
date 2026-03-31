@@ -277,7 +277,7 @@ export default function MyRideDashboardPage() {
 
       <MyRideDashboardHeader />
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
         {error && (
           <div
             style={{

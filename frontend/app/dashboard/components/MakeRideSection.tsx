@@ -176,7 +176,7 @@ export default function MakeRideSection({
           </p>
 
           {/* Source + Destination */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div style={{ position: "relative" }}>
               <label className="d-label">From</label>
               <div style={{ display: "flex", gap: 8 }}>
@@ -258,7 +258,7 @@ export default function MakeRideSection({
           </div>
 
           {/* Departure + Seats */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="d-label">Departure Time</label>
               <input type="datetime-local" value={departureTime} onChange={e => onDepartureTimeChange(e.target.value)} className="d-input" />

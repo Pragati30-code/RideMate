@@ -233,4 +233,34 @@ export const dashboardStyles = `
     color: #c0392b;
     margin-top: 4px;
   }
+
+  /* ---- Responsive grid utility ---- */
+  .resp-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* ---- Mobile overrides ---- */
+  @media (max-width: 640px) {
+    .d-section {
+      padding: 16px;
+      border-radius: 18px;
+    }
+    .d-card {
+      padding: 14px;
+      border-radius: 16px;
+    }
+    .d-section-title { font-size: 17px; }
+    .resp-grid-2 { grid-template-columns: 1fr; }
+    .d-btn, .d-btn-accent {
+      font-size: 13px;
+      padding: 10px 18px;
+    }
+    .d-btn-ghost {
+      font-size: 12px;
+      padding: 8px 14px;
+    }
+    .d-map { height: 220px; }
+  }
 `;

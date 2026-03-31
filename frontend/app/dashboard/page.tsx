@@ -187,7 +187,7 @@ export default function DashboardPage() {
 
       <DashboardHeader />
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 16px" }}>
 
         {/* Toast messages */}
         {(error || message) && (

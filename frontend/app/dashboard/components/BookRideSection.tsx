@@ -239,7 +239,7 @@ export default function BookRideSection({
       <h2 className="d-section-title">Search Rides</h2>
 
       {/* Location inputs */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Source */}
         <div style={{ position: "relative" }}>
           <label className="d-label">From</label>

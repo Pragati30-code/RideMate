@@ -9,7 +9,7 @@ const stats = [
 
 export default function HeroSection() {
   return (
-    <main className="relative px-8 pb-0 pt-8" style={{ maxWidth: 1200, margin: "0 auto" }}>
+    <main className="relative px-4 sm:px-8 pb-0 pt-8" style={{ maxWidth: 1200, margin: "0 auto" }}>
 
       {/* Background blobs */}
       <div style={{
@@ -29,10 +29,10 @@ export default function HeroSection() {
       <div className="doodle-dot" style={{ width: 16, height: 16, background: "#f4a0c0", top: 80,  right: "12%" }}/>
       <div className="doodle-dot" style={{ width: 10, height: 10, background: "#ff9b6a", top: 200, right: "25%" }}/>
 
-      <div className="grid lg:grid-cols-2 gap-16 items-center" style={{ minHeight: "80vh" }}>
+      <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center" style={{ minHeight: "80vh" }}>
 
         {/* Left — Text content */}
-        <div style={{ paddingBottom: 60 }}>
+        <div style={{ paddingBottom: 40 }}>
 
           {/* Badge */}
           <div className="sticker-badge fade-up-1" style={{ marginBottom: 28 }}>
@@ -89,7 +89,7 @@ export default function HeroSection() {
 
           {/* Stats */}
           <div className="fade-up-4" style={{
-            display: "flex", gap: 32,
+            display: "flex", gap: 24, flexWrap: "wrap",
             borderTop: "1.5px solid rgba(45,45,45,0.08)",
             paddingTop: 28
           }}>

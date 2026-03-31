@@ -58,7 +58,7 @@ export default function AuthShell({ children, maxWidth, padding, bottomNote }: A
           backdropFilter: "blur(28px)",
           border: "1.5px solid rgba(255,255,255,0.95)",
           borderRadius: 28,
-          padding: "40px 36px",
+          padding: "clamp(24px, 5vw, 40px) clamp(18px, 5vw, 36px)",
           boxShadow: "0 20px 60px rgba(180,140,100,0.1)",
         }}
       >
