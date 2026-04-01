@@ -398,7 +398,12 @@ Success response: array of your rides.
 
 ### 3.5 Cancel My Ride
 
-Only works if ride is `ACTIVE` or `FULL`. Cannot cancel a ride that is `IN_PROGRESS` or `COMPLETED`.
+Only works if ride is `ACTIVE` or `FULL`.
+
+Cancellation is blocked when:
+
+- ride is `IN_PROGRESS` or `COMPLETED`
+- at least one passenger has already joined the ride (any non-`CANCELLED` booking exists for that ride)
 
 - Method: `PUT`
 - URL: `/rides/{rideId}/cancel`
@@ -464,6 +469,8 @@ Success response:
 Passenger provides their specific pickup and drop stop (name + coordinates). Fare is calculated automatically for this segment.
 
 Bookings are blocked if ride status is `IN_PROGRESS`, `COMPLETED`, or `CANCELLED`. If ride is `FULL`, booking is also blocked (a seat must free up first via cancellation).
+
+Bookings are also blocked if the same user already has any created driver ride in `ACTIVE`, `FULL`, or `IN_PROGRESS` status.
 
 - Method: `POST`
 - URL: `/bookings`

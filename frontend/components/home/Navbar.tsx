@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Github } from "lucide-react";
 
 export default function Navbar() {
   return (
@@ -30,18 +31,43 @@ export default function Navbar() {
         </span>
       </div>
 
-      {/* Buttons — inline styles so no btn-main class conflicts */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        background: "rgba(255,255,255,0.75)",
-        backdropFilter: "blur(20px)",
-        border: "1.5px solid rgba(255,255,255,0.9)",
-        borderRadius: 50,
-        padding: "6px 6px 6px 12px",
-        boxShadow: "0 4px 20px rgba(180,140,100,0.1)",
-      }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* GitHub — hidden on mobile */}
+        <a
+          href="https://github.com/pragati30-code/ridemate"
+          target="_blank"
+          rel="noreferrer"
+          className="hidden sm:flex items-center justify-center"
+          style={{
+            background: "rgba(255,255,255,0.75)",
+            backdropFilter: "blur(20px)",
+            border: "1.5px solid rgba(255,255,255,0.9)",
+            borderRadius: 999,
+            height: 36,
+            width: 36,
+            boxShadow: "0 4px 20px rgba(180,140,100,0.1)",
+            color: "#555",
+            lineHeight: 1,
+            textAlign: "center",
+          }}
+          aria-label="GitHub repository"
+          title="GitHub repository"
+        >
+          <Github size={18} strokeWidth={2.2} />
+        </a>
+
+        {/* Buttons — inline styles so no btn-main class conflicts */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          background: "rgba(255,255,255,0.75)",
+          backdropFilter: "blur(20px)",
+          border: "1.5px solid rgba(255,255,255,0.9)",
+          borderRadius: 50,
+          padding: "6px 6px 6px 12px",
+          boxShadow: "0 4px 20px rgba(180,140,100,0.1)",
+        }}>
 
         {/* Log in — hidden on mobile */}
         <Link href="/login" className="hidden sm:block">
@@ -79,6 +105,7 @@ export default function Navbar() {
             Sign up ✦
           </button>
         </Link>
+        </div>
       </div>
     </nav>
   );
