@@ -4,6 +4,7 @@ import com.backend.prod.dto.CreateRideRequest;
 import com.backend.prod.dto.RideSearchResult;
 import com.backend.prod.entity.Ride;
 import com.backend.prod.entity.User;
+import com.backend.prod.repository.BookingRepository;
 import com.backend.prod.repository.RideRepository;
 import com.backend.prod.repository.UserRepository;
 
@@ -26,10 +27,12 @@ public class RideService {
 
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
-    public RideService(RideRepository rideRepository, UserRepository userRepository) {
+    public RideService(RideRepository rideRepository, UserRepository userRepository, BookingRepository bookingRepository) {
         this.rideRepository = rideRepository;
         this.userRepository = userRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     public Ride createRide(String email, CreateRideRequest request) {
@@ -144,6 +147,11 @@ public class RideService {
 
         if ("IN_PROGRESS".equals(ride.getStatus()) || "COMPLETED".equals(ride.getStatus())) {
             throw new RuntimeException("Cannot cancel a ride that has already started or completed");
+        }
+
+        boolean hasJoinedPassengers = !bookingRepository.findByRideIdAndStatusNot(rideId, "CANCELLED").isEmpty();
+        if (hasJoinedPassengers) {
+            throw new RuntimeException("Cannot cancel this ride because passengers have already joined");
         }
 
         ride.setStatus("CANCELLED");

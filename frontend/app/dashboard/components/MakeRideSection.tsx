@@ -14,6 +14,19 @@ function parseCoordinate(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+async function reverseGeocode(latitude: number, longitude: number): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(latitude))}&lon=${encodeURIComponent(String(longitude))}`
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as { display_name?: string };
+    return data.display_name?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 type MakeRideSectionProps = {
   driverStatus: DriverStatus;
   vehicleNumber: string; vehicleModel: string; drivingLicense: string;
@@ -22,7 +35,7 @@ type MakeRideSectionProps = {
   sourceLatitude: string; sourceLongitude: string;
   destinationLatitude: string; destinationLongitude: string;
   departureTime: string; availableSeats: string;
-  myRides: Ride[]; creatingRide: boolean;
+  myRides: Ride[]; creatingRide: boolean; cancellingRideId: number | null;
   onVehicleNumberChange: (v: string) => void;
   onVehicleModelChange: (v: string) => void;
   onDrivingLicenseChange: (v: string) => void;
@@ -36,24 +49,33 @@ type MakeRideSectionProps = {
   onDepartureTimeChange: (v: string) => void;
   onAvailableSeatsChange: (v: string) => void;
   onCreateRide: () => void;
+  onCancelRide: (rideId: number) => void;
 };
 
 export default function MakeRideSection({
   driverStatus, vehicleNumber, vehicleModel, drivingLicense, submittingVerification,
   rideSource, rideDestination, sourceLatitude, sourceLongitude,
   destinationLatitude, destinationLongitude, departureTime, availableSeats,
-  myRides, creatingRide,
+  myRides, creatingRide, cancellingRideId,
   onVehicleNumberChange, onVehicleModelChange, onDrivingLicenseChange, onSubmitVerification,
   onRideSourceChange, onRideDestinationChange,
   onSourceLatitudeChange, onSourceLongitudeChange,
   onDestinationLatitudeChange, onDestinationLongitudeChange,
-  onDepartureTimeChange, onAvailableSeatsChange, onCreateRide,
+  onDepartureTimeChange, onAvailableSeatsChange, onCreateRide, onCancelRide,
 }: MakeRideSectionProps) {
   const [sourceSuggestions, setSourceSuggestions] = useState<NominatimSuggestion[]>([]);
   const [destinationSuggestions, setDestinationSuggestions] = useState<NominatimSuggestion[]>([]);
   const [isSearchingSource, setIsSearchingSource] = useState(false);
   const [isSearchingDestination, setIsSearchingDestination] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
+
+  const setSourceFromCoordinates = async (latitude: number, longitude: number) => {
+    const resolvedLocation = await reverseGeocode(latitude, longitude);
+    onRideSourceChange(resolvedLocation ?? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+    onSourceLatitudeChange(String(latitude));
+    onSourceLongitudeChange(String(longitude));
+    setSourceSuggestions([]);
+  };
 
   const sourcePoint = useMemo(() => {
     const lat = parseCoordinate(sourceLatitude), lon = parseCoordinate(sourceLongitude);
@@ -109,11 +131,8 @@ export default function MakeRideSection({
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-      onRideSourceChange("Current Location");
-      onSourceLatitudeChange(String(pos.coords.latitude));
-      onSourceLongitudeChange(String(pos.coords.longitude));
-      setSourceSuggestions([]);
+    navigator.geolocation.getCurrentPosition(async pos => {
+      await setSourceFromCoordinates(pos.coords.latitude, pos.coords.longitude);
     }, () => {}, { enableHighAccuracy: true, timeout: 10000 });
   };
 
@@ -248,10 +267,7 @@ export default function MakeRideSection({
                 )}
                 {routeCoordinates.length === 2 && <MapRoute coordinates={routeCoordinates} color="#ff9b6a" width={4} opacity={0.85} />}
                 <MapControls showZoom showLocate onLocate={({ latitude, longitude }) => {
-                  onRideSourceChange("Current Location");
-                  onSourceLatitudeChange(String(latitude));
-                  onSourceLongitudeChange(String(longitude));
-                  setSourceSuggestions([]);
+                  void setSourceFromCoordinates(latitude, longitude);
                 }} />
               </Map>
             </div>
@@ -332,11 +348,23 @@ export default function MakeRideSection({
                         )}
                       </div>
 
-                      <Link href={`/driver-dashboard?rideId=${ride.id}`} style={{ textDecoration: "none" }}>
-                        <button className="d-btn-ghost" style={{ fontSize: 13 }}>
-                          Track Passengers →
-                        </button>
-                      </Link>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <Link href={`/driver-dashboard?rideId=${ride.id}`} style={{ textDecoration: "none" }}>
+                          <button className="d-btn-ghost" style={{ fontSize: 13 }}>
+                            Track Passengers →
+                          </button>
+                        </Link>
+                        {("ACTIVE" === ride.status || "FULL" === ride.status) && (
+                          <button
+                            className="d-btn-ghost"
+                            onClick={() => onCancelRide(ride.id)}
+                            disabled={cancellingRideId === ride.id}
+                            style={{ fontSize: 13, borderColor: "rgba(220,80,80,0.35)", color: "#c0392b" }}
+                          >
+                            {cancellingRideId === ride.id ? "Cancelling…" : "Cancel Ride"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -13,6 +13,19 @@ function parseCoordinate(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+async function reverseGeocode(latitude: number, longitude: number): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(latitude))}&lon=${encodeURIComponent(String(longitude))}`
+    );
+    if (!response.ok) return null;
+    const data = (await response.json()) as { display_name?: string };
+    return data.display_name?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 type BookRideSectionProps = {
   searchSource: string;
   searchDestination: string;
@@ -173,10 +186,14 @@ export default function BookRideSection({
   const useCurrentLocation = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        onSearchSourceChange("Current Location");
-        onSearchSourceLatitudeChange(String(pos.coords.latitude));
-        onSearchSourceLongitudeChange(String(pos.coords.longitude));
+      async pos => {
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+        const resolvedLocation = await reverseGeocode(latitude, longitude);
+
+        onSearchSourceChange(resolvedLocation ?? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        onSearchSourceLatitudeChange(String(latitude));
+        onSearchSourceLongitudeChange(String(longitude));
         setSourceSuggestions([]);
       },
       () => {},

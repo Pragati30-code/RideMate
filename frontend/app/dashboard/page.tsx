@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [activeRides, setActiveRides] = useState<Ride[]>([]);
   const [myRides, setMyRides] = useState<Ride[]>([]);
   const [bookingRideId, setBookingRideId] = useState<number | null>(null);
+  const [cancellingRideId, setCancellingRideId] = useState<number | null>(null);
 
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
@@ -95,7 +96,7 @@ export default function DashboardPage() {
       if (!res.ok) { setError("Failed to search rides."); return; }
       const data = (await res.json()) as SearchRideResult[];
       setSearchedRides(data);
-      setMessage(data.length ? "Rides found!" : "No rides found for this route.");
+      setMessage(data.length ? "✅ Rides found!" : "❌ No rides found for this route.");
     } catch { setError("Unable to reach server."); }
   };
 
@@ -127,7 +128,15 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ rideId, seats, pickupName: searchSource, pickupLatitude: pLat, pickupLongitude: pLon, dropName: searchDestination, dropLatitude: dLat, dropLongitude: dLon }),
       });
-      if (!res.ok) { setError("Unable to book ride. Please verify seats and ride status."); return; }
+      if (!res.ok) {
+        let msg = "Unable to book ride. Please verify seats and ride status.";
+        try {
+          const body = (await res.json()) as { error?: string; message?: string };
+          msg = body.error || body.message || msg;
+        } catch {}
+        setError(msg);
+        return;
+      }
       setMessage("Ride booked successfully! 🎉");
       await Promise.all([fetchActiveRides(), fetchMyRides()]);
       await handleSearchRides();
@@ -163,6 +172,34 @@ export default function DashboardPage() {
       setDestinationLatitude(""); setDestinationLongitude(""); setDepartureTime(""); setAvailableSeats("");
     } catch { setError("Unable to create ride."); }
     finally { setCreatingRide(false); }
+  };
+
+  const handleCancelCreatedRide = async (rideId: number) => {
+    setMessage(""); setError("");
+    setCancellingRideId(rideId);
+    try {
+      const res = await fetch(apiUrl(`/rides/${rideId}/cancel`), {
+        method: "PUT",
+        headers: { ...getAuthHeaders() },
+      });
+
+      if (!res.ok) {
+        let msg = "Unable to cancel ride.";
+        try {
+          const body = (await res.json()) as { error?: string; message?: string };
+          msg = body.error || body.message || msg;
+        } catch {}
+        setError(msg);
+        return;
+      }
+
+      setMessage("Ride cancelled successfully.");
+      await Promise.all([fetchActiveRides(), fetchMyRides()]);
+    } catch {
+      setError("Unable to cancel ride.");
+    } finally {
+      setCancellingRideId(null);
+    }
   };
 
   if (loading) {
@@ -201,7 +238,7 @@ export default function DashboardPage() {
             color: error ? "#c0392b" : "#3a8a3a",
             display: "flex", alignItems: "center", gap: 8,
           }}>
-            <span>{error ? "⚠️" : "✅"}</span>
+            {/* <span>{error ? "⚠️" : "✅"}</span> */}
             {error || message}
           </div>
         )}
@@ -229,14 +266,14 @@ export default function DashboardPage() {
             sourceLatitude={sourceLatitude} sourceLongitude={sourceLongitude}
             destinationLatitude={destinationLatitude} destinationLongitude={destinationLongitude}
             departureTime={departureTime} availableSeats={availableSeats}
-            myRides={myRides} creatingRide={creatingRide}
+            myRides={myRides} creatingRide={creatingRide} cancellingRideId={cancellingRideId}
             onVehicleNumberChange={setVehicleNumber} onVehicleModelChange={setVehicleModel}
             onDrivingLicenseChange={setDrivingLicense} onSubmitVerification={handleSubmitVerification}
             onRideSourceChange={setRideSource} onRideDestinationChange={setRideDestination}
             onSourceLatitudeChange={setSourceLatitude} onSourceLongitudeChange={setSourceLongitude}
             onDestinationLatitudeChange={setDestinationLatitude} onDestinationLongitudeChange={setDestinationLongitude}
             onDepartureTimeChange={setDepartureTime} onAvailableSeatsChange={setAvailableSeats}
-            onCreateRide={handleCreateRide}
+            onCreateRide={handleCreateRide} onCancelRide={handleCancelCreatedRide}
           />
         )}
       </main>

@@ -11,30 +11,34 @@ export default function Footer() {
         gap:            12,
       }}>
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width:          34, height: 34,
-            background:     "#2d2d2d",
-            borderRadius:   "50%",
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "center",
-          }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <path d="M5 13l1.5-4.5A2 2 0 018.4 7h7.2a2 2 0 011.9 1.5L19 13" stroke="#fdf6ec" strokeWidth="2" strokeLinecap="round"/>
-              <rect x="3" y="13" width="18" height="5" rx="2.5" fill="#fdf6ec"/>
-              <circle cx="7.5"  cy="18" r="1.5" fill="#2d2d2d"/>
-              <circle cx="16.5" cy="18" r="1.5" fill="#2d2d2d"/>
-            </svg>
-          </div>
-          <span className="font-display" style={{ fontWeight: 700, fontSize: 16, color: "#2d2d2d" }}>
-            RideMate
-          </span>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div style={{
+          width: 38, height: 38,
+          background: "#2d2d2d",
+          borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 14px rgba(45,45,45,0.2)",
+          flexShrink: 0,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M5 13l1.5-4.5A2 2 0 018.4 7h7.2a2 2 0 011.9 1.5L19 13" stroke="#fdf6ec" strokeWidth="1.8" strokeLinecap="round"/>
+            <rect x="3" y="13" width="18" height="5" rx="2.5" fill="#fdf6ec" opacity="0.95"/>
+            <circle cx="7.5" cy="18" r="2" fill="#2d2d2d" stroke="#fdf6ec" strokeWidth="1.2"/>
+            <circle cx="16.5" cy="18" r="2" fill="#2d2d2d" stroke="#fdf6ec" strokeWidth="1.2"/>
+            <path d="M3 15h18" stroke="#2d2d2d" strokeWidth="0.8" opacity="0.3"/>
+          </svg>
         </div>
+        <span
+          className="font-display font-bold"
+          style={{ color: "#2d2d2d", letterSpacing: "-0.5px", fontSize: "clamp(14px, 4vw, 20px)" }}
+        >
+          RideMate
+        </span>
+      </div>
 
         {/* Copyright */}
         <p className="font-body" style={{ color: "#aaa", fontSize: 13 }}>
-          © 2026 RideMate — made with 🫶 for students, by students.
+          © 2026 RideMate — Driven by Connection, Built by Pragati 🌷
         </p>
       </div>
     </footer>

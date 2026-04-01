@@ -50,6 +50,13 @@ public class BookingService {
             throw new RuntimeException("You can only have one active booking at a time until that ride ends");
         }
 
+        boolean hasOngoingDriverRide = rideRepository.existsByDriverAndStatusIn(
+                user,
+                List.of("ACTIVE", "FULL", "IN_PROGRESS"));
+        if (hasOngoingDriverRide) {
+            throw new RuntimeException("You cannot book a ride while one of your created rides is active or in progress");
+        }
+
         if (ride.getDriver().getId().equals(user.getId())) {
             throw new RuntimeException("You cannot book your own ride");
         }
