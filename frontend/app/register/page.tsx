@@ -75,7 +75,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="auth-label">Student ID</label>
-              <input {...register("studentId")} className="auth-input" placeholder="STU001" />
+              <input {...register("studentId")} className="auth-input" placeholder="12345678901" inputMode="numeric" maxLength={11} />
               {errors.studentId && <p className="field-error">{errors.studentId.message}</p>}
             </div>
           </div>
