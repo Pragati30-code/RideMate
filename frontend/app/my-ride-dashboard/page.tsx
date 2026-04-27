@@ -9,6 +9,7 @@ import MyRideDashboardHeader from "./components/MyRideDashboardHeader";
 import MyRideOverview from "./components/MyRideOverview";
 import MyRideMapPanel from "./components/MyRideMapPanel";
 import MyRideParticipantsSection from "./components/MyRideParticipantsSection";
+import RideRatingCard from "./components/RideRatingCard";
 import { myRideDashboardStyles } from "./components/myRideDashboardStyles";
 
 type RazorpayResponse = {
@@ -339,6 +340,13 @@ export default function MyRideDashboardPage() {
               participants={participants}
               passengerStats={passengerStats}
             />
+
+            {currentBooking.status === "DROPPED" && (
+              <RideRatingCard
+                rideId={currentBooking.ride.id}
+                driverName={currentBooking.ride.driver?.name}
+              />
+            )}
           </>
         )}
       </main>
