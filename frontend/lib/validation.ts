@@ -7,17 +7,8 @@ const phoneRegex = /^[6-9][0-9]{9}$/;
 const studentIdRegex = /^[0-9]{11}$/;
 
 export const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .regex(emailRegex, "Enter a valid email"),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .regex(
-      passwordRegex,
-      "Password must include uppercase, lowercase, number, and special character"
-    ),
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export const registerSchema = z.object({
