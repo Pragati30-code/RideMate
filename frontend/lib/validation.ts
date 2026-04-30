@@ -22,7 +22,7 @@ export const registerSchema = z.object({
     .regex(emailRegex, "Enter a valid email"),
   phoneNumber: z
     .string()
-    .regex(phoneRegex, "Enter a valid 10-digit Indian mobile number"),
+    .regex(phoneRegex, "Enter a valid 10-digit mobile number"),
   password: z
     .string()
     .min(6, "Password must be at least 6 characters")
