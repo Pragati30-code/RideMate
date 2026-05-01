@@ -96,11 +96,22 @@ Request body:
   "name": "Khushi",
   "email": "khushi@example.com",
   "password": "Khushi@123",
-  "studentId": "STU001",
+  "studentId": "12345678901",
   "gender": "Female",
   "phoneNumber": "9876543210"
 }
 ```
+
+Frontend validation rules (enforced on the register page before the request is sent):
+
+- `name` — min 2 chars; letters, spaces, hyphens, or apostrophes only (`/^[A-Za-z][A-Za-z\s'-]{1,}$/`)
+- `email` — must match `/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/`
+- `password` — min 6 chars; must include uppercase, lowercase, digit, and special character (`!@#$%^&*(),.?":{}|<>`)
+- `phoneNumber` — exactly 10 digits, must start with 6–9 (`/^[6-9][0-9]{9}$/`)
+- `studentId` — exactly 11 numeric digits (`/^[0-9]{11}$/`)
+- `gender` — one of `Male`, `Female`, `Other`
+
+The login page only validates that the email is well-formed and the password is at least 6 characters; no regex constraints are applied there.
 
 Success response:
 
@@ -109,7 +120,7 @@ Success response:
   "id": 1,
   "name": "Khushi",
   "email": "khushi@example.com",
-  "studentId": "STU001",
+  "studentId": "12345678901",
   "gender": "Female",
   "phoneNumber": "9876543210",
   "rideOtp": "482913",
@@ -164,7 +175,7 @@ Success response:
   "id": 1,
   "name": "Khushi",
   "email": "khushi@example.com",
-  "studentId": "STU001",
+  "studentId": "12345678901",
   "gender": "Female",
   "phoneNumber": "9876543210",
   "rideOtp": "482913",
@@ -197,7 +208,7 @@ Success response:
     "id": 1,
     "name": "Khushi",
     "email": "khushi@example.com",
-    "studentId": "STU001",
+    "studentId": "12345678901",
     "gender": "Female",
     "phoneNumber": "9876543210",
     "rideOtp": "482913",
@@ -699,7 +710,7 @@ Success response:
     "userId": 2,
     "name": "Rahul",
     "email": "rahul@example.com",
-    "studentId": "STU002",
+    "studentId": "12345678902",
     "gender": "Male",
     "phoneNumber": "9123456789",
     "vehicleNumber": "MH14XY5678",
