@@ -7,7 +7,8 @@ Full-stack ride-sharing application enabling students to share rides, split cost
 - **Geospatial Ride Matching** - Location-based search with Haversine distance calculation
 - **Secure Payments** - Razorpay integration with signature verification & refund handling
 - **Real-time Notifications** - WebSocket (STOMP) for instant booking updates
-- **Dual Rating System** - Separate driver/passenger ratings with weighted averages
+- **Post-Ride Star Rating** - Frontend 5-star rating with optional feedback, persisted per ride in `localStorage`
+- **Strict Form Validation** - Register page enforces regex rules for name, email, password (upper/lower/digit/special), 10-digit phone, and 11-digit numeric student ID
 - **JWT Authentication** - Stateless auth with BCrypt password hashing
 
 ## 🏗️ System Architecture
@@ -82,31 +83,40 @@ users                  1:N vehicles
 
 ## 🚀 Key API Endpoints
 
+See [api.md](api.md) for the full reference. Highlights:
+
 ```
-POST   /api/auth/signup              Register new user
-POST   /api/auth/login               JWT token generation
-GET    /api/users/me                 Current user profile
-PUT    /api/users/me                 Update profile
+POST   /auth/register                                  Register new user
+POST   /auth/login                                     Issue JWT token
+GET    /auth/me                                        Current user profile
 
-POST   /api/vehicles                 Add vehicle
-GET    /api/vehicles/me              List user vehicles
+POST   /users/submit-driver-details                    Apply to become a driver
+GET    /users/driver-status                            Check driver verification status
+GET    /users                                          List all users (ADMIN)
 
-POST   /api/rides                    Create ride
-POST   /api/rides/search             Location-based ride search
-GET    /api/rides/{id}               Ride details
-DELETE /api/rides/{id}               Cancel ride
+POST   /rides                                          Create ride (verified driver)
+POST   /rides/search                                   Geospatial ride search
+GET    /rides                                          List active rides
+GET    /rides/my-rides                                 Driver's own rides
+PUT    /rides/{id}/cancel                              Cancel a ride
+POST   /rides/{id}/start                               Start a ride
+POST   /rides/{id}/end                                 End a ride
 
-POST   /api/bookings                 Request booking
-PUT    /api/bookings/{id}/accept     Driver accepts
-PUT    /api/bookings/{id}/reject     Driver rejects
-GET    /api/bookings/me              User bookings
+POST   /bookings                                       Book a ride
+GET    /bookings/my-bookings                           Passenger booking history
+GET    /bookings/my-current                            Active booking
+GET    /bookings/driver/ride/{rideId}                  Driver view of bookings
+GET    /bookings/ride/{rideId}/participants            Ride participant list
+PUT    /bookings/{id}/cancel                           Cancel booking
+PUT    /bookings/{id}/pickup                           Mark passenger picked up (OTP)
+PUT    /bookings/{id}/drop                             Mark passenger dropped
 
-POST   /api/payments/create-order    Generate Razorpay order
-POST   /api/payments/verify          Verify payment signature
-POST   /api/payments/refund          Process refund
+POST   /bookings/{id}/payments/razorpay/order          Create Razorpay order
+POST   /bookings/{id}/payments/razorpay/verify         Verify Razorpay payment
 
-POST   /api/reviews                  Submit review
-GET    /api/users/{id}/reviews       User reviews
+GET    /admin/driver-verifications/pending             Pending driver applications
+PUT    /admin/driver-verifications/{userId}/approve    Approve driver
+PUT    /admin/driver-verifications/{userId}/reject     Reject driver
 ```
 
 ## 📡 Real-time Features
@@ -135,7 +145,7 @@ GET    /api/users/{id}/reviews       User reviews
 
 ## 🚀 Deployment Architecture
 
-**Backend**: Heroku   
+**Backend**: Render / Heroku   
 **Frontend**: Vercel (Edge network, SSR)  
 **Database**: Neon PostgreSQL (auto-scaling, daily backups)
 
