@@ -172,6 +172,8 @@ RAZORPAY_KEY_SECRET=<secret>
 
 ## 📈 Future Enhancements
 
+- [ ] ETA broadcast to passengers during active rides
+- [ ] Real-time ride status updates (pickup, en-route, drop-off)
 - [ ] Redis caching for frequent ride searches
 - [ ] Elasticsearch for full-text search
 - [ ] Apache Kafka for event streaming
