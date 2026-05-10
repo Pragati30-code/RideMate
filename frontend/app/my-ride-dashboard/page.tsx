@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { type MapRef } from "@/components/ui/map";
 import { apiUrl, clearAuthSession, getAuthHeaders, getAuthToken } from "@/lib/api";
+import { useRideLiveLocation } from "@/lib/useRideLiveLocation";
+import { subscribe } from "@/lib/ws";
 import { CurrentUserBooking, DriverRideBooking } from "../dashboard/types";
 import MyRideDashboardHeader from "./components/MyRideDashboardHeader";
 import MyRideOverview from "./components/MyRideOverview";
@@ -134,6 +136,39 @@ export default function MyRideDashboardPage() {
     }
     void refresh();
   }, [router]);
+
+  const { driverPos, eta } = useRideLiveLocation({
+    rideId: currentBooking?.ride?.id ?? null,
+    bookingId: currentBooking?.id ?? null,
+  });
+
+  useEffect(() => {
+    const rideId = currentBooking?.ride?.id;
+    if (!rideId) return;
+    let sub: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await subscribe<{ bookingId: number; status: string }>(
+          `/topic/rides/${rideId}/bookings`,
+          () => {
+            void refresh();
+          },
+        );
+        if (cancelled) {
+          s.unsubscribe();
+          return;
+        }
+        sub = s;
+      } catch {
+        // Silent — REST refresh remains the fallback when user re-navigates
+      }
+    })();
+    return () => {
+      cancelled = true;
+      sub?.unsubscribe();
+    };
+  }, [currentBooking?.ride?.id]);
 
   useEffect(() => {
     if (!mapRef.current || !currentBooking?.ride) return;
@@ -333,7 +368,13 @@ export default function MyRideDashboardPage() {
               onPayWithRazorpay={handlePayWithRazorpay}
             />
 
-            <MyRideMapPanel currentBooking={currentBooking} mapRef={mapRef} dropMarkers={dropMarkers} />
+            <MyRideMapPanel
+              currentBooking={currentBooking}
+              mapRef={mapRef}
+              dropMarkers={dropMarkers}
+              driverPos={driverPos}
+              eta={eta}
+            />
 
             <MyRideParticipantsSection
               loadingParticipants={loadingParticipants}

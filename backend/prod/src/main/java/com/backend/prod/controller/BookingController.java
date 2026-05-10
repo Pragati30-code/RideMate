@@ -1,5 +1,6 @@
 package com.backend.prod.controller;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import com.backend.prod.service.BookingService;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/bookings")
@@ -19,9 +21,12 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService,
+                             SimpMessagingTemplate messagingTemplate) {
         this.bookingService = bookingService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     // Book a ride — request must include pickupLatitude/Longitude and dropLatitude/Longitude
@@ -67,13 +72,18 @@ public class BookingController {
     public Booking markPickedUp(@PathVariable Long bookingId,
             @RequestBody PickupOtpRequest request,
             Authentication auth) {
-        return bookingService.markPickedUp(bookingId, auth.getName(), request != null ? request.getOtp() : null);
+        Booking booking = bookingService.markPickedUp(bookingId, auth.getName(),
+                request != null ? request.getOtp() : null);
+        broadcastBookingStatus(booking);
+        return booking;
     }
 
     // Driver marks passenger as dropped off
     @PutMapping("/{bookingId}/drop")
     public Booking markDropped(@PathVariable Long bookingId, Authentication auth) {
-        return bookingService.markDropped(bookingId, auth.getName());
+        Booking booking = bookingService.markDropped(bookingId, auth.getName());
+        broadcastBookingStatus(booking);
+        return booking;
     }
 
     @PostMapping("/{bookingId}/payments/razorpay/order")
@@ -86,5 +96,17 @@ public class BookingController {
             @RequestBody RazorpayVerifyRequest request,
             Authentication auth) {
         return bookingService.verifyRazorpayPayment(bookingId, auth.getName(), request);
+    }
+
+    private void broadcastBookingStatus(Booking booking) {
+        if (booking == null || booking.getRide() == null) return;
+        Long rideId = booking.getRide().getId();
+        Map<String, Object> event = Map.of(
+                "bookingId", booking.getId(),
+                "rideId", rideId,
+                "status", booking.getStatus(),
+                "ts", System.currentTimeMillis()
+        );
+        messagingTemplate.convertAndSend("/topic/rides/" + rideId + "/bookings", event);
     }
 }

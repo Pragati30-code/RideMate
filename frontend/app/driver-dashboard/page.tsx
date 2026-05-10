@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type MapRef } from "@/components/ui/map";
 import { apiUrl, clearAuthSession, getAuthHeaders, getAuthToken } from "@/lib/api";
+import { useDriverLocation } from "@/lib/useDriverLocation";
 import { DriverRideBooking, Ride } from "../dashboard/types";
 import DriverDashboardHeader from "./components/DriverDashboardHeader";
 import DriverRideSummary from "./components/DriverRideSummary";
@@ -49,6 +50,11 @@ function DriverDashboardContent() {
   const [otpModalBooking, setOtpModalBooking] = useState<DriverRideBooking | null>(null);
   const [pickupOtpValue, setPickupOtpValue] = useState("");
   const [pickupOtpError, setPickupOtpError] = useState("");
+
+  useDriverLocation({
+    rideId: selectedRide?.id ?? null,
+    enabled: selectedRide?.status === "IN_PROGRESS",
+  });
 
   const dropMarkers = useMemo(
     () => bookings.filter(b => typeof b.dropLatitude === "number" && typeof b.dropLongitude === "number"),

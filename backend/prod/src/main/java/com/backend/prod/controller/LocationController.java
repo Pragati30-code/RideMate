@@ -11,17 +11,21 @@ import org.springframework.stereotype.Controller;
 import com.backend.prod.dto.LocationPing;
 import com.backend.prod.entity.Ride;
 import com.backend.prod.repository.RideRepository;
+import com.backend.prod.service.EtaService;
 
 @Controller
 public class LocationController {
 
     private final RideRepository rideRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final EtaService etaService;
 
     public LocationController(RideRepository rideRepository,
-                              SimpMessagingTemplate messagingTemplate) {
+                              SimpMessagingTemplate messagingTemplate,
+                              EtaService etaService) {
         this.rideRepository = rideRepository;
         this.messagingTemplate = messagingTemplate;
+        this.etaService = etaService;
     }
 
     @MessageMapping("/rides/{rideId}/location")
@@ -43,5 +47,6 @@ public class LocationController {
         }
 
         messagingTemplate.convertAndSend("/topic/rides/" + rideId + "/location", ping);
+        etaService.publishEtas(rideId, ping.getLat(), ping.getLng(), ping.getSpeedKmh());
     }
 }
