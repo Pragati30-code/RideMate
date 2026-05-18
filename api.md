@@ -755,6 +755,98 @@ Success response:
 
 ---
 
+## 6. WebSocket / Real-time
+
+Live driver location, per-passenger ETA, and booking-status events use STOMP over WebSocket (SockJS fallback).
+
+### 6.1 Connection
+
+- Endpoint: `/ws` (SockJS)
+- Full URL: `http://localhost:8080/ws?token=<jwt_token>`
+- The JWT is passed as a `token` **query parameter** (not a header) — it is validated during the handshake. An invalid/missing token returns `401` and the handshake is rejected.
+- STOMP broker destinations: `/topic`, `/queue`
+- App (client → server) prefix: `/app`
+- User-specific prefix: `/user`
+
+### 6.2 Driver Publishes Location
+
+Only the ride's own driver may publish, and only while the ride is `IN_PROGRESS`. Pings that fail these checks are silently ignored.
+
+- Type: `SEND`
+- Destination: `/app/rides/{rideId}/location`
+
+Message body:
+
+```json
+{
+  "lat": 18.4636,
+  "lng": 73.8670,
+  "speedKmh": 32.5,
+  "ts": 1715000000000
+}
+```
+
+Notes:
+- `lat` and `lng` are required; a ping without them is ignored
+- `speedKmh` is optional (sent as `null` when the device speed is unavailable)
+- `ts` is optional — server fills in `System.currentTimeMillis()` if omitted
+
+### 6.3 Subscribe to Driver Location
+
+Passengers (and the driver's own UI) subscribe to receive re-broadcast position updates.
+
+- Type: `SUBSCRIBE`
+- Destination: `/topic/rides/{rideId}/location`
+
+Message payload (same shape as the published ping):
+
+```json
+{
+  "lat": 18.4636,
+  "lng": 73.8670,
+  "speedKmh": 32.5,
+  "ts": 1715000000000
+}
+```
+
+### 6.4 Subscribe to ETA
+
+For every non-`CANCELLED` booking on the ride, the server computes ETA from the driver's current position to that booking's pickup and publishes per booking. ETA is straight-line (Haversine) distance ÷ effective speed, where effective speed is the reported `speedKmh` floored at **10 km/h** (used if speed is missing or slower).
+
+- Type: `SUBSCRIBE`
+- Destination: `/topic/bookings/{bookingId}/eta`
+
+Message payload:
+
+```json
+{
+  "etaSeconds": 540,
+  "distanceM": 1500
+}
+```
+
+### 6.5 Subscribe to Booking Status Events
+
+Pickup and drop transitions are broadcast for the whole ride.
+
+- Type: `SUBSCRIBE`
+- Destination: `/topic/rides/{rideId}/bookings`
+
+Message payload:
+
+```json
+{
+  "bookingId": 50,
+  "rideId": 10,
+  "status": "PICKED_UP",
+  "ts": 1715000000000
+}
+```
+
+`status` is the booking's new status (`PICKED_UP` or `DROPPED`).
+
+---
+
 ## Quick Testing Flow (Recommended)
 
 1. Register a normal user (Khushi)

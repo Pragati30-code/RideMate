@@ -121,11 +121,18 @@ PUT    /admin/driver-verifications/{userId}/reject     Reject driver
 
 ## 📡 Real-time Features
 
-**WebSocket Channels**:
-- `/topic/rides` - Broadcast ride updates
-- `/queue/user/{userId}/notifications` - Personal notifications
+STOMP-over-WebSocket with SockJS fallback. Single endpoint `/ws`, authenticated by passing the JWT as a `?token=` query param during the handshake (validated in a `HandshakeInterceptor`). Broker prefixes: `/topic`, `/queue`; app prefix `/app`; user prefix `/user`.
 
-**Event Types**: `BOOKING_REQUEST`, `BOOKING_ACCEPTED`, `BOOKING_REJECTED`, `RIDE_CANCELLED`, `PAYMENT_SUCCESS`, `PAYMENT_FAILED`
+**Live driver location & ETA** (active during `IN_PROGRESS` rides):
+- Driver publishes GPS pings → `/app/rides/{rideId}/location` (`{ lat, lng, speedKmh, ts }`)
+- Server re-broadcasts position → `/topic/rides/{rideId}/location`
+- Server computes per-passenger ETA from the driver's position to each pickup (Haversine ÷ speed, min 10 km/h floor) → `/topic/bookings/{bookingId}/eta` (`{ etaSeconds, distanceM }`)
+- Only the ride's own driver may publish; pings on non-`IN_PROGRESS` rides are dropped
+
+**Booking status events**:
+- Pickup / drop transitions broadcast → `/topic/rides/{rideId}/bookings` (`{ bookingId, rideId, status, ts }`)
+
+See [api.md](api.md#6-websocket--real-time) for the full WebSocket reference.
 
 ## ⚡ Performance & Scalability
 
@@ -172,8 +179,8 @@ RAZORPAY_KEY_SECRET=<secret>
 
 ## 📈 Future Enhancements
 
-- [ ] ETA broadcast to passengers during active rides
-- [ ] Real-time ride status updates (pickup, en-route, drop-off)
+- [x] ETA broadcast to passengers during active rides
+- [x] Real-time ride status updates (pickup, en-route, drop-off)
 - [ ] Redis caching for frequent ride searches
 - [ ] Elasticsearch for full-text search
 - [ ] Apache Kafka for event streaming
